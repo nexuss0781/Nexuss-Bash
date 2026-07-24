@@ -2,8 +2,7 @@
 
 const fs = require('fs');
 const path = require('path');
-const { spawnProcess } = require('../sandbox/processLauncher');
-const { generateJobId, generatePackageId } = require('../utils/id');
+const { generatePackageId } = require('../utils/id');
 const { log, audit } = require('../utils/logger');
 const config = require('../config');
 
@@ -85,39 +84,28 @@ async function install(name, manager) {
 
   log('info', 'packageManager', `Installing ${name} via ${manager}`);
 
-  let command;
-  let args;
+  const { execSync } = require('child_process');
+  let cmd;
 
   switch (manager) {
     case 'apt':
-      command = 'sudo';
-      args = ['apt-get', 'install', '-y', name];
+      cmd = `apt-get update -qq && apt-get install -y ${name}`;
       break;
     case 'pip':
-      command = 'pip3';
-      args = ['install', name];
+      cmd = `pip3 install --break-system-packages ${name}`;
       break;
     case 'npm':
-      command = 'npm';
-      args = ['install', '-g', name];
+      cmd = `npm install -g ${name}`;
       break;
     case 'composer':
-      command = 'composer';
-      args = ['global', 'require', name];
+      cmd = `composer global require ${name}`;
       break;
   }
 
-  const id = generateJobId();
-  const result = await spawnProcess({
-    id: `pkg-${id}`,
-    command,
-    args,
-    cwd: '/tmp',
-    timeout_ms: 300000, // 5 minutes for package install
-  });
-
-  if (result.exit_code !== 0) {
-    throw new Error(`Package install failed: ${result.stderr}`);
+  try {
+    execSync(cmd, { encoding: 'utf8', timeout: 300000, stdio: 'pipe' });
+  } catch (err) {
+    throw new Error(`Package install failed: ${err.stderr || err.message}`);
   }
 
   // Calculate installed size
@@ -161,38 +149,31 @@ async function uninstall(name, manager) {
   log('info', 'packageManager', `Uninstalling ${name} via ${manager || pkg.manager}`);
 
   const useManager = manager || pkg.manager;
-  let command;
-  let args;
+  const { execSync } = require('child_process');
+  let cmd;
 
   switch (useManager) {
     case 'apt':
-      command = 'sudo';
-      args = ['apt-get', 'remove', '-y', name];
+      cmd = `apt-get remove -y ${name}`;
       break;
     case 'pip':
-      command = 'pip3';
-      args = ['uninstall', '-y', name];
+      cmd = `pip3 uninstall -y ${name}`;
       break;
     case 'npm':
-      command = 'npm';
-      args = ['uninstall', '-g', name];
+      cmd = `npm uninstall -g ${name}`;
       break;
     case 'composer':
-      command = 'composer';
-      args = ['global', 'remove', name];
+      cmd = `composer global remove ${name}`;
       break;
     default:
       throw new Error(`Unsupported manager: ${useManager}`);
   }
 
-  const id = generateJobId();
-  await spawnProcess({
-    id: `pkg-rm-${id}`,
-    command,
-    args,
-    cwd: '/tmp',
-    timeout_ms: 60000,
-  });
+  try {
+    execSync(cmd, { encoding: 'utf8', timeout: 60000, stdio: 'pipe' });
+  } catch (err) {
+    throw new Error(`Package uninstall failed: ${err.stderr || err.message}`);
+  }
 
   remove(name);
 

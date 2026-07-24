@@ -2,10 +2,10 @@
 
 const fs = require('fs');
 const path = require('path');
-const yaml = require('js-yaml');
+const { execSync } = require('child_process');
 const { generatePipelineId } = require('../utils/id');
+const { log } = require('../utils/logger');
 const jobExecutor = require('./jobExecutor');
-const { log, audit } = require('../utils/logger');
 const config = require('../config');
 
 const pipelines = new Map();
@@ -69,6 +69,7 @@ function buildStep(step) {
     command: step.command || null,
     code: step.code || null,
     file_id: step.file_id || null,
+    root: !!step.root,
     timeout: step.timeout || 30,
     continue_on_error: !!step.continue_on_error,
     always_run: !!step.always_run,
@@ -146,18 +147,40 @@ async function executeStep(step) {
   }
 
   try {
-    const jobResult = jobExecutor.submit({
-      language,
-      code,
-      timeout_sec: step.timeout,
-    });
+    if (step.root) {
+      const start = Date.now();
+      try {
+        const stdout = execSync(code, {
+          encoding: 'utf8',
+          timeout: (step.timeout || 30) * 1000,
+          stdio: 'pipe',
+          env: { ...process.env, FORCE_COLOR: '0' },
+        });
+        step.stdout = stdout;
+        step.stderr = '';
+        step.exit_code = 0;
+        step.status = 'completed';
+      } catch (err) {
+        step.exit_code = err.status !== undefined ? err.status : 1;
+        step.stdout = err.stdout || '';
+        step.stderr = err.stderr || err.message;
+        step.status = 'failed';
+      }
+      step.duration_ms = Date.now() - start;
+    } else {
+      const jobResult = jobExecutor.submit({
+        language,
+        code,
+        timeout_sec: step.timeout,
+      });
 
-    const result = await waitForJob(jobResult.id);
-    step.exit_code = result.exit_code;
-    step.stdout = result.stdout;
-    step.stderr = result.stderr;
-    step.duration_ms = result.duration_ms;
-    step.status = result.exit_code === 0 ? 'completed' : 'failed';
+      const result = await waitForJob(jobResult.id);
+      step.exit_code = result.exit_code;
+      step.stdout = result.stdout;
+      step.stderr = result.stderr;
+      step.duration_ms = result.duration_ms;
+      step.status = result.exit_code === 0 ? 'completed' : 'failed';
+    }
   } catch (err) {
     step.status = 'failed';
     step.stderr = err.message;

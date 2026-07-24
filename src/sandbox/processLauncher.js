@@ -16,6 +16,8 @@ function spawnProcess(options) {
       env = process.env,
       timeout_ms = DEFAULT_TIMEOUT_MS,
       limits = {},
+      uid = 1000,
+      gid = 1000,
     } = options;
 
     const startTime = Date.now();
@@ -44,8 +46,8 @@ function spawnProcess(options) {
       env,
       stdio: ['pipe', 'pipe', 'pipe'],
       detached: true,
-      uid: 1000,
-      gid: 1000,
+      uid,
+      gid,
     });
 
     // Assign PID to cgroup
