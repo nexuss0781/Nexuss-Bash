@@ -3,7 +3,7 @@
 const fs = require('fs');
 const path = require('path');
 const { spawnProcess } = require('../sandbox/processLauncher');
-const { generateJobId } = require('../utils/id');
+const { generateJobId, generatePackageId } = require('../utils/id');
 const { log, audit } = require('../utils/logger');
 const config = require('../config');
 
@@ -35,6 +35,7 @@ function save() {
 
 function add(name, manager, size_kb = 0) {
   const entry = {
+    id: generatePackageId(),
     name,
     manager,
     installed_at: new Date().toISOString(),
@@ -133,15 +134,16 @@ async function install(name, manager) {
   }
 
   // Add to manifest
-  add(name, manager, size_kb);
+  const entry = add(name, manager, size_kb);
 
   audit('package_install', name, { manager, size_kb });
   log('info', 'packageManager', `Package installed: ${name} via ${manager}`);
 
   return {
+    id: entry.id,
     name,
     manager,
-    installed_at: new Date().toISOString(),
+    installed_at: entry.installed_at,
     size_kb,
   };
 }

@@ -6,7 +6,7 @@ const rateLimits = new Map();
 
 function getRateLimit(key, type) {
   const now = Date.now();
-  const windowMs = 60000; // 1 minute window
+  const windowMs = 60000;
 
   if (!rateLimits.has(key)) {
     rateLimits.set(key, {});
@@ -20,7 +20,6 @@ function getRateLimit(key, type) {
 
   const entry = limits[type];
 
-  // Reset window if expired
   if (now - entry.windowStart > windowMs) {
     entry.count = 0;
     entry.windowStart = now;
@@ -42,7 +41,6 @@ function checkRateLimit(key, type, maxRequests) {
 }
 
 function rateLimiter(req, res, next) {
-  // Skip rate limiting for /health
   if (req.path === '/health') {
     return next();
   }
@@ -64,7 +62,10 @@ function rateLimiter(req, res, next) {
     maxRequests = config.EXEC_RATE;
   } else if (req.method === 'POST' && req.path === '/packages/install') {
     type = 'packageInstall';
-    maxRequests = 5; // 5 per minute
+    maxRequests = config.PACKAGE_INSTALL_RATE;
+  } else if (req.method === 'POST' && req.path === '/pipelines') {
+    type = 'jobSubmit';
+    maxRequests = config.JOB_SUBMIT_RATE;
   } else {
     return next();
   }
@@ -73,9 +74,11 @@ function rateLimiter(req, res, next) {
 
   if (!result.allowed) {
     return res.status(429).json({
-      error: 'rate_limited',
-      message: 'Too many requests',
-      retry_after_sec: result.retry_after_sec,
+      error: {
+        code: 'rate_limited',
+        message: 'Too many requests',
+        details: { retry_after_sec: result.retry_after_sec },
+      },
     });
   }
 

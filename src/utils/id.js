@@ -10,4 +10,16 @@ function generateJobId() {
   return 'job_' + crypto.randomBytes(4).toString('hex');
 }
 
-module.exports = { generateSessionId, generateJobId };
+function generatePackageId() {
+  return 'pkg_' + crypto.randomBytes(4).toString('hex');
+}
+
+function generateFileId() {
+  return 'file_' + crypto.randomBytes(4).toString('hex');
+}
+
+function generatePipelineId() {
+  return 'pipe_' + crypto.randomBytes(4).toString('hex');
+}
+
+module.exports = { generateSessionId, generateJobId, generatePackageId, generateFileId, generatePipelineId };

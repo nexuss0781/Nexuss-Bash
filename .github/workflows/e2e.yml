@@ -1,0 +1,21 @@
+name: E2E Tests
+on: [push, pull_request]
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build Docker image
+        run: docker build -t nexuss-bash .
+      - name: Run container
+        run: docker run -d -p 3000:3000 -e API_KEY=test-key --name nexuss-bash nexuss-bash
+      - name: Wait for startup
+        run: sleep 10
+      - name: Run E2E tests
+        run: bash tests/e2e.sh
+        env:
+          API_URL: http://localhost:3000
+          API_KEY: test-key
+      - name: Cleanup
+        if: always()
+        run: docker stop nexuss-bash && docker rm nexuss-bash
