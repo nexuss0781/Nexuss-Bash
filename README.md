@@ -111,19 +111,61 @@ steps:
     always_run: true
 ```
 
+**Root steps** — use `root: true` for commands needing elevated privileges (apt, system installs):
+
+```yaml
+name: "Install and Run"
+steps:
+  - id: install_deps
+    root: true
+    command: "apt-get update -qq && apt-get install -y git"
+    timeout: 120
+
+  - id: clone
+    command: "git clone https://github.com/user/repo.git /workspace/repo"
+    depends_on: install_deps
+
+  - id: run
+    command: "node /workspace/repo/index.js"
+    depends_on: clone
+```
+
+**Step options:**
+| Field | Type | Default | Description |
+|-------|------|---------|-------------|
+| `id` | string | (required) | Unique step identifier |
+| `command` | string | null | Shell command to execute |
+| `code` | string | null | Code to run via language runtime |
+| `file_id` | string | null | Execute an uploaded file |
+| `language` | string | `bash` | Runtime: `bash`, `python3`, `node`, `php` |
+| `root` | bool | false | Run as root (for apt, system commands) |
+| `timeout` | int | 30 | Max seconds |
+| `depends_on` | array | [] | Step IDs that must complete first |
+| `continue_on_error` | bool | false | Don't fail pipeline if this step fails |
+| `always_run` | bool | false | Run even if previous steps failed |
+
+**Upload and execute:**
+
+```bash
+# Upload a pipeline YAML file
+curl -X POST http://localhost:3000/files/upload \
+  -H "Authorization: Bearer your-key" \
+  -F "file=@pipeline.yaml"
+
+# Execute from uploaded file
+curl -X POST http://localhost:3000/pipelines \
+  -H "Authorization: Bearer your-key" \
+  -H "Content-Type: application/json" \
+  -d '{"file_id": "file_xxx"}'
+```
+
+**Or submit inline YAML:**
+
 ```bash
 curl -X POST http://localhost:3000/pipelines \
   -H "Authorization: Bearer your-key" \
   -H "Content-Type: application/json" \
   -d '{"yaml": "name: test\nsteps:\n  - id: s1\n    command: echo hello"}'
-```
-
-### File Upload
-
-```bash
-curl -X POST http://localhost:3000/files/upload \
-  -H "Authorization: Bearer your-key" \
-  -F "file=@script.py"
 ```
 
 ---
