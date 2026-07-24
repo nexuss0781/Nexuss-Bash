@@ -9,54 +9,82 @@ const resourceManager = require('../core/resourceManager');
 router.post('/install', (req, res) => {
   if (resourceManager.isThrottled()) {
     return res.status(503).json({
-      error: 'throttled',
-      message: 'Resource usage too high, try again later',
-      retry_after_sec: 60,
+      error: {
+        code: 'throttled',
+        message: 'Resource usage too high, try again later',
+        details: { retry_after_sec: 60 },
+      },
     });
   }
 
   const { name, manager } = req.body;
 
   if (!name) {
-    return res.status(400).json({ error: 'bad_request', message: 'Missing package name' });
+    return res.status(400).json({
+      error: {
+        code: 'bad_request',
+        message: 'Missing package name',
+        details: { field: 'name' },
+      },
+    });
   }
 
   if (!manager) {
-    return res.status(400).json({ error: 'bad_request', message: 'Missing manager (apt, pip, npm, composer)' });
+    return res.status(400).json({
+      error: {
+        code: 'bad_request',
+        message: 'Missing manager (apt, pip, npm, composer)',
+        details: { field: 'manager' },
+      },
+    });
   }
 
   packageManager
     .install(name, manager)
     .then((result) => {
-      res.json(result);
+      res.status(201).json({ data: result });
     })
     .catch((err) => {
       if (err.message.includes('Unsupported manager') || err.message.includes('cannot be empty')) {
-        return res.status(400).json({ error: 'bad_request', message: err.message });
+        return res.status(400).json({
+          error: { code: 'bad_request', message: err.message, details: {} },
+        });
       }
-      res.status(500).json({ error: 'internal_error', message: err.message });
+      res.status(500).json({
+        error: { code: 'internal_error', message: err.message, details: {} },
+      });
     });
 });
 
-// GET /packages - List all packages
+// GET /packages - List all packages with pagination
 router.get('/', (req, res) => {
-  const packages = packageManager.list();
-  res.json(packages);
+  const limit = Math.min(parseInt(req.query.limit, 10) || 20, 100);
+  const offset = parseInt(req.query.offset, 10) || 0;
+  const allPackages = packageManager.list();
+  const total = allPackages.length;
+  const data = allPackages.slice(offset, offset + limit);
+  res.json({ data, total });
 });
 
 // DELETE /packages/:name - Remove a package
-router.delete('/:name', (req, res) => {
+router.delete('/:name', async (req, res) => {
   try {
-    const removed = packageManager.uninstall(req.params.name);
-    res.json(removed);
+    const removed = await packageManager.uninstall(req.params.name);
+    res.json({ data: removed });
   } catch (err) {
     if (err.message.includes('not found')) {
-      return res.status(404).json({ error: 'not_found', message: err.message });
+      return res.status(404).json({
+        error: { code: 'not_found', message: err.message, details: {} },
+      });
     }
     if (err.message.includes('protected')) {
-      return res.status(403).json({ error: 'forbidden', message: err.message });
+      return res.status(403).json({
+        error: { code: 'forbidden', message: err.message, details: {} },
+      });
     }
-    res.status(500).json({ error: 'internal_error', message: err.message });
+    res.status(500).json({
+      error: { code: 'internal_error', message: err.message, details: {} },
+    });
   }
 });
 

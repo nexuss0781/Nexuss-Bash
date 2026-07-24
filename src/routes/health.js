@@ -10,16 +10,29 @@ router.get('/', (req, res) => {
   const snapshot = resourceManager.getSnapshot();
   const sessions = sessionManager.list();
   const jobs = jobExecutor.list();
+  const thresholdStatus = resourceManager.getThresholdStatus();
+
+  let status;
+  if (thresholdStatus === 'ok' || thresholdStatus === 'soft') {
+    status = 'ok';
+  } else if (thresholdStatus === 'throttle') {
+    status = 'degraded';
+  } else {
+    status = 'unhealthy';
+  }
 
   res.json({
-    status: 'ok',
-    uptime_sec: Math.floor(process.uptime()),
-    sessions_active: sessions.filter((s) => s.status === 'active').length,
-    sessions_total_created: sessions.length,
-    jobs_running: jobs.filter((j) => j.status === 'running').length,
-    jobs_total_completed: jobs.filter((j) => j.status === 'completed').length,
-    mem_pct: snapshot.mem_pct,
-    disk_pct: snapshot.disk_pct,
+    data: {
+      status,
+      version: '1.0.0',
+      uptime_sec: Math.floor(process.uptime()),
+      sessions_active: sessions.filter((s) => s.status === 'active').length,
+      sessions_total_created: sessions.length,
+      jobs_running: jobs.filter((j) => j.status === 'running').length,
+      jobs_total_completed: jobs.filter((j) => j.status === 'completed').length,
+      mem_pct: snapshot.mem_pct,
+      disk_pct: snapshot.disk_pct,
+    },
   });
 });
 

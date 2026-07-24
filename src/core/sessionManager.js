@@ -65,7 +65,7 @@ function create() {
   log('info', 'sessionManager', `Session created: ${id}`);
 
   return {
-    session_id: id,
+    id,
     status: 'active',
     created_at: session.created_at,
   };
@@ -256,6 +256,14 @@ function stopSweep() {
   }
 }
 
+function getStats() {
+  const all = Array.from(sessions.values());
+  return {
+    active: all.filter((s) => s.status === 'active').length,
+    total_created: all.length,
+  };
+}
+
 function getAllSessions() {
   return sessions;
 }
@@ -269,5 +277,6 @@ module.exports = {
   close,
   startSweep,
   stopSweep,
+  getStats,
   getAllSessions,
 };

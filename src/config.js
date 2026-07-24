@@ -23,6 +23,9 @@ const config = Object.freeze({
   MEMORY_LIMIT_MB: parseInt(process.env.MEMORY_LIMIT_MB || '440', 10),
   CPU_LIMIT_PCT: parseInt(process.env.CPU_LIMIT_PCT || '80', 10),
   DISK_LIMIT_MB: parseInt(process.env.DISK_LIMIT_MB || '9000', 10),
+  PACKAGE_INSTALL_RATE: parseInt(process.env.PACKAGE_INSTALL_RATE || '5', 10),
+  MAX_UPLOAD_MB: parseInt(process.env.MAX_UPLOAD_MB || '10', 10),
+  MAX_PIPELINE_STEPS: parseInt(process.env.MAX_PIPELINE_STEPS || '20', 10),
   ENABLE_BWRAP: process.env.ENABLE_BWRAP === 'true',
 });
 

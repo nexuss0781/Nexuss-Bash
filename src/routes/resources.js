@@ -5,6 +5,7 @@ const router = express.Router();
 const resourceManager = require('../core/resourceManager');
 const sessionManager = require('../core/sessionManager');
 const jobExecutor = require('../core/jobExecutor');
+const config = require('../config');
 
 router.get('/', (req, res) => {
   const snapshot = resourceManager.getSnapshot();
@@ -14,24 +15,26 @@ router.get('/', (req, res) => {
   const totalMemMB = Math.round(require('os').totalmem() / (1024 * 1024));
   const usedMemMB = Math.round((snapshot.mem_pct / 100) * totalMemMB);
 
-  const totalDiskMB = parseInt(process.env.DISK_LIMIT_MB || '9000', 10);
+  const totalDiskMB = config.DISK_LIMIT_MB;
   const usedDiskMB = Math.round((snapshot.disk_pct / 100) * totalDiskMB);
 
   res.json({
-    memory: {
-      total_mb: totalMemMB,
-      used_mb: usedMemMB,
-      pct: snapshot.mem_pct,
+    data: {
+      memory: {
+        total_mb: totalMemMB,
+        used_mb: usedMemMB,
+        pct: snapshot.mem_pct,
+      },
+      disk: {
+        total_mb: totalDiskMB,
+        used_mb: usedDiskMB,
+        pct: snapshot.disk_pct,
+      },
+      load_avg: snapshot.load_avg,
+      status: resourceManager.getThresholdStatus(),
+      sessions_active: sessions.filter((s) => s.status === 'active').length,
+      jobs_running: jobs.filter((j) => j.status === 'running').length,
     },
-    disk: {
-      total_mb: totalDiskMB,
-      used_mb: usedDiskMB,
-      pct: snapshot.disk_pct,
-    },
-    load_avg: snapshot.load_avg,
-    status: resourceManager.getThresholdStatus(),
-    sessions_active: sessions.filter((s) => s.status === 'active').length,
-    jobs_running: jobs.filter((j) => j.status === 'running').length,
   });
 });
 

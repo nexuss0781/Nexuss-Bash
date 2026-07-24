@@ -75,7 +75,7 @@ function submit({ language, code, timeout_sec, limits = {} }) {
   executeJob(id);
 
   return {
-    job_id: id,
+    id,
     status: 'queued',
     submitted_at: job.submitted_at,
   };
@@ -166,9 +166,19 @@ function list() {
   }));
 }
 
+function getStats() {
+  const all = Array.from(jobs.values());
+  return {
+    running: all.filter((j) => j.status === 'running').length,
+    completed: all.filter((j) => j.status === 'completed').length,
+    failed: all.filter((j) => j.status === 'failed').length,
+  };
+}
+
 module.exports = {
   submit,
   get,
   list,
+  getStats,
   getAllJobs: () => jobs,
 };

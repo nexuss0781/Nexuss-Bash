@@ -19,6 +19,9 @@ const sessionRoutes = require('./src/routes/sessions');
 const jobRoutes = require('./src/routes/jobs');
 const packageRoutes = require('./src/routes/packages');
 const resourceRoutes = require('./src/routes/resources');
+const fileRoutes = require('./src/routes/files');
+const pipelineRoutes = require('./src/routes/pipelines');
+const systemRoutes = require('./src/routes/system');
 
 const app = express();
 const PORT = config.PORT;
@@ -42,10 +45,13 @@ app.use((req, res, next) => {
 
 // Routes
 app.use('/health', healthRoutes);
+app.use('/files', fileRoutes);
 app.use('/sessions', sessionRoutes);
 app.use('/jobs', jobRoutes);
 app.use('/packages', packageRoutes);
 app.use('/resources', resourceRoutes);
+app.use('/pipelines', pipelineRoutes);
+app.use('/system', systemRoutes);
 
 // Error handling
 app.use(notFoundHandler);

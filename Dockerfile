@@ -20,7 +20,7 @@ COPY package*.json ./
 RUN npm install --omit=dev
 COPY . .
 
-RUN mkdir -p /workspace/sessions /workspace/jobs /workspace/logs && \
+RUN mkdir -p /workspace/sessions /workspace/jobs /workspace/logs /workspace/uploads && \
     chown -R runner:runner /workspace
 
 RUN mkdir -p /app/data && touch /app/data/packages.json && \
