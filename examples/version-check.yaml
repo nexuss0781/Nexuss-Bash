@@ -1,0 +1,36 @@
+name: "Package Version Check"
+description: "Install dependencies and print versions of all installed packages"
+
+steps:
+  - id: check_python
+    language: python3
+    code: |
+      import sys
+      print(f"Python: {sys.version}")
+
+  - id: check_node
+    language: bash
+    command: "node --version"
+
+  - id: check_bash
+    language: bash
+    command: "bash --version | head -1"
+
+  - id: check_php
+    language: bash
+    command: "php --version | head -1"
+
+  - id: check_pip_packages
+    language: python3
+    code: |
+      import subprocess
+      r = subprocess.run(["pip", "list", "--format=columns"], capture_output=True, text=True)
+      print(r.stdout[:500] if r.stdout else "pip: no packages")
+
+  - id: check_npm_global
+    language: bash
+    command: "npm list -g --depth=0 2>/dev/null || echo 'npm: no global packages'"
+
+  - id: check_system
+    language: bash
+    command: "uname -a && cat /etc/os-release | head -3"
