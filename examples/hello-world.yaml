@@ -1,0 +1,18 @@
+name: "Hello World Demo"
+description: "Clone Nexuss Bash, run hello world pipeline"
+
+steps:
+  - id: hello_world
+    language: bash
+    command: "echo 'Hello from Nexuss Bash!'"
+
+  - id: system_info
+    language: bash
+    command: "whoami && hostname && date"
+
+  - id: python_demo
+    language: python3
+    code: |
+      import platform
+      print(f"Hello from Python {platform.python_version()}")
+      print(f"Running on {platform.system()} {platform.release()}")
