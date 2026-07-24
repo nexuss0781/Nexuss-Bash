@@ -2,6 +2,7 @@
 
 const fs = require('fs');
 const path = require('path');
+const yaml = require('js-yaml');
 const { execSync } = require('child_process');
 const { generatePipelineId } = require('../utils/id');
 const { log } = require('../utils/logger');
