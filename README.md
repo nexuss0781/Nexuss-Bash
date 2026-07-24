@@ -11,7 +11,7 @@
 
 *A self-hosted, container-based remote execution service that gives you interactive shell sessions, one-off code execution, and runtime package management — all through a clean REST API.*
 
-[Getting Started](#-quick-start) · [API Reference](#-api-reference) · [Architecture](#-architecture) · [Deploy](#-deploy-on-render)
+[Getting Started](#-quick-start) · [API Reference](#-api-reference) · [Architecture](#-architecture)
 
 </div>
 
@@ -39,7 +39,6 @@ Nexuss Bash is a **lightweight, secure remote execution platform** that runs ins
 - [API Reference](#-api-reference)
 - [Configuration](#-configuration)
 - [Security](#-security)
-- [Deploy on Render](#-deploy-on-render)
 - [Development](#-development)
 - [License](#-license)
 
@@ -349,52 +348,6 @@ Nexuss Bash executes arbitrary remote commands — it's designed with security a
 - Never expose the service publicly without HTTPS
 - Monitor audit logs regularly
 - Use `ENABLE_BWRAP=true` for untrusted code execution
-
----
-
-## 🚀 Deploy on Render
-
-### One-Click Deploy
-
-1. Fork this repository
-2. Go to [Render Dashboard](https://dashboard.render.com)
-3. Click **New** → **Web Service**
-4. Connect your forked repo
-5. Select **Docker** as the runtime
-6. Add environment variable: `API_KEY` = your-secret-key
-7. Deploy!
-
-### Using render.yaml
-
-The included `render.yaml` automatically configures:
-
-```yaml
-services:
-  - type: web
-    name: nexuss-bash
-    env: docker
-    plan: starter
-    healthCheckPath: /health
-    envVars:
-      - key: API_KEY
-        sync: false  # Set manually in Render dashboard
-```
-
-### Keep-Alive (Prevent Spin-Down)
-
-A GitHub Actions workflow runs every 14 minutes to prevent Render's free/starter instances from spinning down:
-
-```yaml
-name: keepalive
-on:
-  schedule:
-    - cron: "*/14 * * * *"
-jobs:
-  ping:
-    runs-on: ubuntu-latest
-    steps:
-      - run: curl -sf https://your-app.onrender.com/health
-```
 
 ---
 
