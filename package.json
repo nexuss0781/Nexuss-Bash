@@ -1,0 +1,13 @@
+{
+  "name": "nexuss-bash",
+  "version": "1.0.0",
+  "description": "Containerized remote execution / dev-sandbox service",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.21.0",
+    "node-pty": "^1.0.0"
+  }
+}

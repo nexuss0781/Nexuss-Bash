@@ -1,0 +1,16 @@
+services:
+  - type: web
+    name: nexuss-bash
+    env: docker
+    plan: starter
+    healthCheckPath: /health
+    healthCheckPolicy: soft
+    envVars:
+      - key: API_KEY
+        sync: false
+      - key: IDLE_SESSION_TIMEOUT_MIN
+        value: "30"
+      - key: CLEANUP_INTERVAL_MIN
+        value: "60"
+      - key: MEMORY_LIMIT_MB
+        value: "440"

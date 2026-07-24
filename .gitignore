@@ -1,0 +1,4 @@
+node_modules/
+workspace/
+data/packages.json
+data/audit.log
