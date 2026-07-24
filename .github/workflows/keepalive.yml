@@ -1,0 +1,9 @@
+name: keepalive
+on:
+  schedule:
+    - cron: "*/14 * * * *"
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - run: curl -sf https://nexuss-bash.onrender.com/health
