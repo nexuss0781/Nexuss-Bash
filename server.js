@@ -35,20 +35,34 @@ const frontendExists = fs.existsSync(FRONTEND_DIR);
 // Redirect root to /app
 if (frontendExists) {
   app.get('/', (req, res) => {
-    res.redirect(302, '/app');
+    res.redirect(302, '/app/');
   });
 
   app.use('/app', express.static(FRONTEND_DIR, { index: 'index.html' }));
 
   app.get('/app/*', (req, res) => {
-    const filePath = path.join(FRONTEND_DIR, req.params[0]);
+    const reqPath = req.params[0];
+
+    if (reqPath.endsWith('.txt')) {
+      return res.status(200).setHeader('Content-Type', 'text/plain').send('');
+    }
+
+    const filePath = path.join(FRONTEND_DIR, reqPath);
     if (fs.existsSync(filePath) && fs.statSync(filePath).isFile()) {
       return res.sendFile(filePath);
     }
-    const indexPath = path.join(FRONTEND_DIR, req.params[0], 'index.html');
+
+    const withSlash = filePath.endsWith('/') ? filePath : filePath + '/';
+    const indexPath = path.join(withSlash, 'index.html');
     if (fs.existsSync(indexPath)) {
       return res.sendFile(indexPath);
     }
+
+    const htmlFile = filePath + '.html';
+    if (fs.existsSync(htmlFile)) {
+      return res.sendFile(htmlFile);
+    }
+
     res.sendFile(path.join(FRONTEND_DIR, 'index.html'));
   });
 }
