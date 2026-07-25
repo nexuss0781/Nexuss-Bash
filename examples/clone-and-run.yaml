@@ -1,24 +1,25 @@
-name: Clone and Run
-description: "Clone Nexuss Bash repo and run it - demonstrates root=true for sudo commands"
+name: Clone and Run Nexuss Bash
+description: "Clone the repo, run test-hello.sh, show results"
 
 steps:
   - id: install_git
-    language: bash
     root: true
     command: "apt-get update -qq && apt-get install -y git"
-    timeout: 60
+    timeout: 120
 
   - id: clone
-    language: bash
     command: "git clone https://github.com/nexuss0781/Nexuss-Bash.git /workspace/Nexuss-Bash"
     depends_on: install_git
 
-  - id: hello
-    language: bash
-    command: "cat /workspace/Nexuss-Bash/examples/hello-world.yaml"
+  - id: run_script
+    command: "bash /workspace/Nexuss-Bash/scripts/test-hello.sh"
+    depends_on: clone
+    timeout: 60
+
+  - id: show_tree
+    command: "ls -la /workspace/Nexuss-Bash/"
     depends_on: clone
 
-  - id: run
-    language: python3
-    code: "import platform; print(f'Hello from Nexuss Bash on {platform.system()} Python {platform.python_version()}')"
+  - id: show_examples
+    command: "cat /workspace/Nexuss-Bash/examples/hello-world.yaml"
     depends_on: clone
