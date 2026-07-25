@@ -21,8 +21,8 @@ const upload = multer({
   },
 });
 
-// POST /run — execute commands, return results
-router.post('/run', upload.single('file'), async (req, res) => {
+// POST / — execute commands, return results
+router.post('/', upload.single('file'), async (req, res) => {
   if (resourceManager.isThrottled()) {
     return res.status(503).json({
       error: { code: 'throttled', message: 'Resource usage too high', details: { retry_after_sec: 60 } },
@@ -43,13 +43,7 @@ router.post('/run', upload.single('file'), async (req, res) => {
         error: {
           code: 'bad_request',
           message: 'Upload a file or provide {"commands": [...]} or {"yaml": "..."}',
-          details: {
-            usage: [
-              'POST /run -F "file=@commands.yaml"',
-              'POST /run -d \'{"commands": ["echo hello", "ls"]}\'>',
-              'POST /run -d \'{"yaml": "commands:\\n  - echo hello\\n  - ls"}\'>',
-            ],
-          },
+          details: {},
         },
       });
     }
@@ -64,14 +58,14 @@ router.post('/run', upload.single('file'), async (req, res) => {
   }
 });
 
-// GET /run — list past runs
-router.get('/run', (req, res) => {
+// GET / — list past runs
+router.get('/', (req, res) => {
   const data = sequentialExecutor.list();
   res.json({ data, total: data.length });
 });
 
-// GET /run/:id — get run details
-router.get('/run/:id', (req, res) => {
+// GET /:id — get run details
+router.get('/:id', (req, res) => {
   const run = sequentialExecutor.get(req.params.id);
   if (!run) {
     return res.status(404).json({
