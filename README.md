@@ -37,14 +37,16 @@ Nexuss Bash is a **lightweight, secure remote execution platform** that runs ins
 docker build -t nexuss-bash .
 docker run -d -p 3000:3000 -e API_KEY="your-key" nexuss-bash
 
-# Health check
-curl http://localhost:3000/health
+# One-liner: upload YAML → execute → get results
+curl -X POST http://localhost:3000/pipelines/run \
+  -H "Authorization: Bearer your-key" \
+  -F "file=@pipeline.yaml"
 
-# Submit a job
-curl -X POST http://localhost:3000/jobs \
+# Or inline YAML
+curl -X POST http://localhost:3000/pipelines/run \
   -H "Authorization: Bearer your-key" \
   -H "Content-Type: application/json" \
-  -d '{"language":"python3","code":"print(2+2)"}'
+  -d '{"yaml": "name: test\nsteps:\n  - id: s1\n    command: echo hello"}'
 ```
 
 ---
@@ -59,7 +61,7 @@ curl -X POST http://localhost:3000/jobs \
 - Success: `{ "data": { ... } }` or `{ "data": [...], "total": N }`
 - Error: `{ "error": { "code": "...", "message": "...", "details": {} } }`
 
-### Endpoints (24)
+### Endpoints (25)
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
@@ -79,7 +81,8 @@ curl -X POST http://localhost:3000/jobs \
 | `GET` | `/files/:id` | Get file metadata |
 | `GET` | `/files/:id/download` | Download file |
 | `DELETE` | `/files/:id` | Delete file |
-| `POST` | `/pipelines` | Submit YAML pipeline |
+| `POST` | **`/pipelines/run`** | **Upload YAML → execute → get results (one call)** |
+| `POST` | `/pipelines` | Submit pipeline (async, poll with GET) |
 | `GET` | `/pipelines` | List pipelines |
 | `GET` | `/pipelines/:id` | Get pipeline status |
 | `DELETE` | `/pipelines/:id` | Cancel pipeline |
@@ -90,28 +93,24 @@ curl -X POST http://localhost:3000/jobs \
 
 ### Pipelines
 
-Submit a YAML pipeline with ordered steps:
+**One-liner — upload YAML file, execute, get results:**
 
-```yaml
-name: "My Pipeline"
-steps:
-  - id: setup
-    language: bash
-    command: "pip install --break-system-packages pandas"
-    timeout: 120
-
-  - id: run
-    language: python3
-    code: "import pandas; print(pandas.__version__)"
-    depends_on: setup
-
-  - id: cleanup
-    language: bash
-    command: "echo done"
-    always_run: true
+```bash
+curl -X POST http://localhost:3000/pipelines/run \
+  -H "Authorization: Bearer your-key" \
+  -F "file=@pipeline.yaml"
 ```
 
-**Root steps** — use `root: true` for commands needing elevated privileges (apt, system installs):
+**Or inline YAML:**
+
+```bash
+curl -X POST http://localhost:3000/pipelines/run \
+  -H "Authorization: Bearer your-key" \
+  -H "Content-Type: application/json" \
+  -d '{"yaml": "name: test\nsteps:\n  - id: s1\n    command: echo hello"}'
+```
+
+**Example pipeline YAML:**
 
 ```yaml
 name: "Install and Run"
@@ -131,42 +130,18 @@ steps:
 ```
 
 **Step options:**
+
 | Field | Type | Default | Description |
 |-------|------|---------|-------------|
 | `id` | string | (required) | Unique step identifier |
-| `command` | string | null | Shell command to execute |
-| `code` | string | null | Code to run via language runtime |
-| `file_id` | string | null | Execute an uploaded file |
-| `language` | string | `bash` | Runtime: `bash`, `python3`, `node`, `php` |
-| `root` | bool | false | Run as root (for apt, system commands) |
+| `command` | string | null | Shell command |
+| `code` | string | null | Code for language runtime |
+| `language` | string | `bash` | `bash`, `python3`, `node`, `php` |
+| `root` | bool | false | Run as root (apt, system installs) |
 | `timeout` | int | 30 | Max seconds |
-| `depends_on` | array | [] | Step IDs that must complete first |
-| `continue_on_error` | bool | false | Don't fail pipeline if this step fails |
-| `always_run` | bool | false | Run even if previous steps failed |
-
-**Upload and execute:**
-
-```bash
-# Upload a pipeline YAML file
-curl -X POST http://localhost:3000/files/upload \
-  -H "Authorization: Bearer your-key" \
-  -F "file=@pipeline.yaml"
-
-# Execute from uploaded file
-curl -X POST http://localhost:3000/pipelines \
-  -H "Authorization: Bearer your-key" \
-  -H "Content-Type: application/json" \
-  -d '{"file_id": "file_xxx"}'
-```
-
-**Or submit inline YAML:**
-
-```bash
-curl -X POST http://localhost:3000/pipelines \
-  -H "Authorization: Bearer your-key" \
-  -H "Content-Type: application/json" \
-  -d '{"yaml": "name: test\nsteps:\n  - id: s1\n    command: echo hello"}'
-```
+| `depends_on` | array | [] | Required prior steps |
+| `continue_on_error` | bool | false | Don't fail pipeline on error |
+| `always_run` | bool | false | Run even if prior steps failed |
 
 ---
 

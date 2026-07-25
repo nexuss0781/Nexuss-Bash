@@ -390,4 +390,30 @@ function cancel(pipelineId) {
   return { id: pipeline.id, status: pipeline.status };
 }
 
-module.exports = { submit, get, list, cancel };
+function submitSync(yamlContent, fileId, timeoutMs) {
+  return new Promise((resolve, reject) => {
+    try {
+      const pipeline = submit(yamlContent, fileId);
+      const timeout = timeoutMs || 120000;
+      const start = Date.now();
+
+      const check = () => {
+        const p = pipelines.get(pipeline.id);
+        if (!p) return reject(new Error('Pipeline lost'));
+        if (['completed', 'failed', 'cancelled'].includes(p.status)) {
+          return resolve(get(pipeline.id));
+        }
+        if (Date.now() - start > timeout) {
+          cancel(pipeline.id);
+          return resolve(get(pipeline.id));
+        }
+        setTimeout(check, 200);
+      };
+      check();
+    } catch (err) {
+      reject(err);
+    }
+  });
+}
+
+module.exports = { submit, submitSync, get, list, cancel };
