@@ -21,7 +21,7 @@ RUN npm install --omit=dev
 
 COPY . .
 
-RUN cd frontend && npm install && npm run build && cd ..
+RUN cd frontend && npm install --legacy-peer-deps && npm run build && cd ..
 
 RUN mkdir -p /workspace/sessions /workspace/jobs /workspace/logs /workspace/uploads && \
     chown -R runner:runner /workspace
