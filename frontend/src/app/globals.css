@@ -1,0 +1,236 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap");
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background: #0a0a0f;
+  color: #e2e8f0;
+  font-family: "Inter", system-ui, -apple-system, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: #0a0a0f;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #2a2a3e;
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #3a3a4e;
+}
+
+/* Selection */
+::selection {
+  background: rgba(99, 102, 241, 0.3);
+  color: #e2e8f0;
+}
+
+/* Terminal styles */
+.xterm {
+  padding: 8px;
+}
+
+.xterm-viewport::-webkit-scrollbar {
+  width: 6px;
+}
+
+.xterm-viewport::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.xterm-viewport::-webkit-scrollbar-thumb {
+  background: #2a2a3e;
+  border-radius: 3px;
+}
+
+/* Glass morphism utility */
+.glass {
+  background: rgba(18, 18, 26, 0.7);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(30, 30, 46, 0.5);
+}
+
+.glass-strong {
+  background: rgba(18, 18, 26, 0.85);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid rgba(30, 30, 46, 0.7);
+}
+
+/* Code blocks */
+pre {
+  background: #0e0e16 !important;
+  border: 1px solid #1e1e2e;
+  border-radius: 8px;
+  padding: 16px;
+  overflow-x: auto;
+  font-family: "JetBrains Mono", monospace;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+code {
+  font-family: "JetBrains Mono", monospace;
+}
+
+:not(pre) > code {
+  background: rgba(99, 102, 241, 0.1);
+  color: #818cf8;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 0.875em;
+}
+
+/* Focus ring */
+*:focus-visible {
+  outline: 2px solid #6366f1;
+  outline-offset: 2px;
+}
+
+/* Drag and drop zone */
+.drop-zone {
+  transition: all 0.2s ease;
+}
+
+.drop-zone.drag-over {
+  border-color: #6366f1;
+  background: rgba(99, 102, 241, 0.05);
+}
+
+/* Smooth transitions */
+.transition-smooth {
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Gradient text */
+.gradient-text {
+  background: linear-gradient(135deg, #6366f1, #22d3ee);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Glow effect on hover */
+.glow-hover {
+  transition: box-shadow 0.3s ease;
+}
+
+.glow-hover:hover {
+  box-shadow: 0 0 20px rgba(99, 102, 241, 0.15),
+    0 0 40px rgba(99, 102, 241, 0.05);
+}
+
+/* Markdown content styles */
+.prose-dark h1 {
+  color: #e2e8f0;
+  font-weight: 700;
+  margin-top: 2em;
+  margin-bottom: 0.5em;
+  font-size: 2em;
+}
+
+.prose-dark h2 {
+  color: #e2e8f0;
+  font-weight: 600;
+  margin-top: 1.5em;
+  margin-bottom: 0.5em;
+  font-size: 1.5em;
+  padding-bottom: 0.3em;
+  border-bottom: 1px solid #1e1e2e;
+}
+
+.prose-dark h3 {
+  color: #e2e8f0;
+  font-weight: 600;
+  margin-top: 1.25em;
+  margin-bottom: 0.5em;
+  font-size: 1.25em;
+}
+
+.prose-dark p {
+  color: #94a3b8;
+  line-height: 1.75;
+  margin-bottom: 1em;
+}
+
+.prose-dark a {
+  color: #818cf8;
+  text-decoration: none;
+  border-bottom: 1px solid transparent;
+  transition: border-color 0.2s ease;
+}
+
+.prose-dark a:hover {
+  border-bottom-color: #818cf8;
+}
+
+.prose-dark ul,
+.prose-dark ol {
+  color: #94a3b8;
+  padding-left: 1.5em;
+  margin-bottom: 1em;
+}
+
+.prose-dark li {
+  margin-bottom: 0.25em;
+}
+
+.prose-dark blockquote {
+  border-left: 3px solid #6366f1;
+  padding-left: 1em;
+  color: #94a3b8;
+  font-style: italic;
+  margin: 1em 0;
+}
+
+.prose-dark table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 1em 0;
+}
+
+.prose-dark th,
+.prose-dark td {
+  border: 1px solid #1e1e2e;
+  padding: 8px 12px;
+  text-align: left;
+}
+
+.prose-dark th {
+  background: #12121a;
+  color: #e2e8f0;
+  font-weight: 600;
+}
+
+.prose-dark td {
+  color: #94a3b8;
+}
+
+.prose-dark hr {
+  border: none;
+  border-top: 1px solid #1e1e2e;
+  margin: 2em 0;
+}
