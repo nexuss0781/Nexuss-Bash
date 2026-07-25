@@ -21,6 +21,7 @@ const packageRoutes = require('./src/routes/packages');
 const resourceRoutes = require('./src/routes/resources');
 const fileRoutes = require('./src/routes/files');
 const pipelineRoutes = require('./src/routes/pipelines');
+const runRoutes = require('./src/routes/run');
 const systemRoutes = require('./src/routes/system');
 
 const app = express();
@@ -51,6 +52,7 @@ app.use('/jobs', jobRoutes);
 app.use('/packages', packageRoutes);
 app.use('/resources', resourceRoutes);
 app.use('/pipelines', pipelineRoutes);
+app.use('/run', runRoutes);
 app.use('/system', systemRoutes);
 
 // Error handling
