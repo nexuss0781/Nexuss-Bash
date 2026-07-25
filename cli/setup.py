@@ -7,7 +7,7 @@ with open(os.path.join(here, "README.md"), encoding="utf-8") as f:
 
 setup(
     name="parad",
-    version="1.0.0",
+    version="1.0.1",
     author="Nexuss",
     author_email="nexuss@proton.me",
     description="CLI client for Nexuss Bash remote execution API",

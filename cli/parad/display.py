@@ -29,9 +29,10 @@ def print_banner() -> None:
 def print_result(result: dict) -> None:
     command = result.get("command", "unknown")
     status = result.get("status", "unknown")
-    output = result.get("output", "")
+    output = result.get("stdout", result.get("output", ""))
     exit_code = result.get("exit_code", None)
-    duration = result.get("duration", None)
+    duration_ms = result.get("duration_ms", result.get("duration", None))
+    duration_s = round(duration_ms / 1000, 2) if isinstance(duration_ms, (int, float)) and duration_ms > 100 else duration_ms
 
     if status == "passed" or status == "success" or status == "completed":
         status_icon = Text("✓ PASS", style="bold green")
@@ -46,13 +47,13 @@ def print_result(result: dict) -> None:
     title.append("  ")
     title.append(command, style="bold white")
     title.append("  ")
-    title.append_obj(status_icon)
+    title.append_text(status_icon)
 
     meta_parts = []
     if exit_code is not None:
         meta_parts.append(f"exit={exit_code}")
-    if duration is not None:
-        meta_parts.append(f"time={duration}s")
+    if duration_s is not None:
+        meta_parts.append(f"time={duration_s}s")
 
     footer = Text()
     if meta_parts:
@@ -141,7 +142,8 @@ def create_results_table(results: list) -> Table:
         command = result.get("command", "unknown")
         status = result.get("status", "unknown")
         exit_code = result.get("exit_code", "-")
-        duration = result.get("duration", "-")
+        duration_ms = result.get("duration_ms", result.get("duration", "-"))
+        duration = round(duration_ms / 1000, 2) if isinstance(duration_ms, (int, float)) and duration_ms > 100 else duration_ms
 
         if status in ("passed", "success", "completed"):
             status_display = Text("✓ PASS", style="bold green")

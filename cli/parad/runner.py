@@ -60,18 +60,18 @@ def run_commands(
                 try:
                     start = time.time()
                     response = api_post("/run", {"commands": [cmd_str]})
+                    data = response.get("data", response)
                     duration = round(time.time() - start, 3)
 
-                    run_id = response.get("run_id") or response.get("id")
+                    run_id = data.get("id")
                     if run_id:
                         result.run_id = run_id
                         set_last_run_id(run_id)
 
-                    cmd_results = response.get("results", [])
+                    cmd_results = data.get("results", [])
                     if cmd_results:
                         for cr in cmd_results:
                             cr.setdefault("command", cmd_str)
-                            cr.setdefault("duration", duration)
                             result.results.append(cr)
 
                         first = cmd_results[0]
@@ -86,10 +86,10 @@ def run_commands(
                     else:
                         entry_result = {
                             "command": cmd_str,
-                            "status": response.get("status", "completed"),
-                            "output": response.get("output", response.get("detail", "")),
-                            "exit_code": response.get("exit_code", 0),
-                            "duration": duration,
+                            "status": data.get("status", "completed"),
+                            "stdout": data.get("stdout", data.get("output", data.get("detail", ""))),
+                            "exit_code": data.get("exit_code", 0),
+                            "duration_ms": data.get("total_duration_ms", duration * 1000),
                         }
                         result.results.append(entry_result)
                         print_result(entry_result)
