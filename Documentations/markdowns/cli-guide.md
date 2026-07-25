@@ -1,33 +1,30 @@
 # CLI Guide
 
-Install and use the Nexuss Bash CLI for quick command execution.
+Install and use the Nexuss Bash CLI (`nexinal`) for command execution and remote management.
 
 ## Installation
 
 ```bash
-npm install -g nexuss-bash-cli
+pip install nexinal
 ```
 
-Or run directly with npx:
+Or from source:
 
 ```bash
-npx nexuss-bash-cli <command>
+git clone https://github.com/nexuss0781/Nexuss-Bash
+cd Nexuss-Bash/cli
+pip install -e .
 ```
 
-## Configuration
+## Authentication
 
-Set your API key:
+Save your API token:
 
 ```bash
-nexuss config --key your-api-key --url https://nexuss-bash.onrender.com
+nexinal auth YOUR_API_TOKEN
 ```
 
-Or use environment variables:
-
-```bash
-export NEXUSS_API_KEY="your-api-key"
-export NEXUSS_API_URL="https://nexuss-bash.onrender.com"
-```
+Token is stored at `~/.nexinal/config.json`.
 
 ## Usage
 
@@ -35,67 +32,77 @@ export NEXUSS_API_URL="https://nexuss-bash.onrender.com"
 
 ```bash
 # Single command
-nexuss run "echo Hello World"
+nexinal run "echo Hello World"
 
-# Multiple commands
-nexuss run "echo First" "echo Second" "whoami"
-
-# From a YAML file
-nexuss run --file commands.yaml
+# Multiple commands (sequential)
+nexinal run "echo First" "echo Second" "whoami"
 ```
 
-### Interactive Session
+### Execute YAML Pipelines
 
 ```bash
-# Start an interactive session
-nexuss shell
-
-# This opens a local terminal connected to the remote session
+nexinal execute pipeline.yaml
+nexinal execute runbook.yaml --stop-on-fail
 ```
 
-### Install Packages
+YAML format:
 
-```bash
-nexuss pkg install git --manager apt
-nexuss pkg install requests --manager pip
-nexuss pkg install express --manager npm
+```yaml
+commands:
+  - name: "Install dependencies"
+    command: "apt-get update -qq && apt-get install -y git"
+    timeout: 120
+    stop_on_fail: true
+  - name: "Clone repo"
+    command: "git clone https://github.com/user/repo.git"
 ```
 
 ### System Info
 
 ```bash
-nexuss status
-nexuss resources
+nexinal status        # Connection status and config
+nexinal health        # Quick health check
+nexinal history       # List past runs
+nexinal sessions      # List active sessions
 ```
 
-### Upload Files
+### Package Management
 
 ```bash
-nexuss upload ./myfile.txt
-nexuss upload ./project/ --recursive
+nexinal packages list
+nexinal packages install git --manager apt
+nexinal packages install requests --manager pip
+nexinal packages install express --manager npm
+```
+
+### Configuration
+
+```bash
+nexinal config                       # Show current config
+nexinal config --set https://custom.example.com  # Set API URL
+nexinal logout                       # Remove saved token
 ```
 
 ## Commands Reference
 
 | Command | Description |
 |---------|-------------|
-| `nexuss run` | Execute commands |
-| `nexuss shell` | Start interactive session |
-| `nexuss pkg install` | Install a package |
-| `nexuss pkg list` | List packages |
-| `nexuss pkg remove` | Remove a package |
-| `nexuss upload` | Upload a file |
-| `nexuss files` | List files |
-| `nexuss status` | System status |
-| `nexuss resources` | Resource usage |
-| `nexuss config` | Set configuration |
-| `nexuss health` | Health check |
+| `nexinal auth <token>` | Save and verify authentication token |
+| `nexinal run <commands...>` | Run commands sequentially on remote server |
+| `nexinal execute <yaml_file>` | Execute commands from a YAML file |
+| `nexinal status` | Show connection and token info |
+| `nexinal health` | Quick health check |
+| `nexinal history` | List past runs |
+| `nexinal sessions` | List active sessions |
+| `nexinal packages list` | List installed packages |
+| `nexinal packages install <name>` | Install a package |
+| `nexinal config` | Show or set API URL |
+| `nexinal logout` | Remove saved token |
 
-## Global Flags
+## Global Options
 
 | Flag | Description |
 |------|-------------|
-| `--json` | Output as JSON |
-| `--quiet` | Suppress output |
-| `--verbose` | Verbose output |
-| `--timeout` | Request timeout (seconds) |
+| `--stop-on-fail` | Stop execution on first failed command |
+| `--help` | Show help |
+| `--version` | Show version |

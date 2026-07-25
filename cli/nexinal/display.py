@@ -1,4 +1,4 @@
-"""Rich display utilities for parad CLI."""
+"""Rich display utilities for nexinal CLI."""
 
 from rich.console import Console
 from rich.table import Table

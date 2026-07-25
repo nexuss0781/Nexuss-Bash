@@ -6,8 +6,8 @@ with open(os.path.join(here, "README.md"), encoding="utf-8") as f:
     long_description = f.read()
 
 setup(
-    name="parad",
-    version="1.0.1",
+    name="nexinal",
+    version="1.0.2",
     author="Nexuss",
     author_email="nexuss@proton.me",
     description="CLI client for Nexuss Bash remote execution API",
@@ -33,7 +33,7 @@ setup(
     ],
     entry_points={
         "console_scripts": [
-            "parad=parad.cli:main",
+            "nexinal=nexinal.cli:main",
         ],
     },
     install_requires=[
@@ -43,7 +43,7 @@ setup(
         "rich>=13.0",
     ],
     python_requires=">=3.8",
-    keywords="cli bash remote execution api nexuss parad",
+    keywords="cli bash remote execution api nexuss nexinal",
     project_urls={
         "Bug Reports": "https://github.com/nexuss0781/Nexuss-Bash/issues",
         "Source": "https://github.com/nexuss0781/Nexuss-Bash",

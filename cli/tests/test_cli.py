@@ -1,4 +1,4 @@
-"""Basic tests for parad CLI."""
+"""Basic tests for nexinal CLI."""
 
 import json
 import os
@@ -7,19 +7,19 @@ import pytest
 from pathlib import Path
 from unittest.mock import patch, MagicMock
 
-from parad.config import (
+from nexinal.config import (
     load_config, save_config, get_token, get_api_url,
     set_token, set_api_url, remove_token, CONFIG_FILE, DEFAULT_API_URL,
 )
-from parad.yaml_parser import parse_yaml_file, YAMLError, CommandEntry
+from nexinal.yaml_parser import parse_yaml_file, YAMLError, CommandEntry
 
 
 @pytest.fixture(autouse=True)
 def temp_config(tmp_path, monkeypatch):
     """Use a temp config file for each test."""
-    monkeypatch.setattr("parad.config.CONFIG_DIR", tmp_path / ".parad")
-    monkeypatch.setattr("parad.config.CONFIG_FILE", tmp_path / ".parad" / "config.json")
-    (tmp_path / ".parad").mkdir(exist_ok=True)
+    monkeypatch.setattr("nexinal.config.CONFIG_DIR", tmp_path / ".nexinal")
+    monkeypatch.setattr("nexinal.config.CONFIG_FILE", tmp_path / ".nexinal" / "config.json")
+    (tmp_path / ".nexinal").mkdir(exist_ok=True)
     yield tmp_path
 
 
@@ -52,15 +52,15 @@ class TestConfig:
         assert get_token() is None
 
     def test_missing_config(self, temp_config, monkeypatch):
-        monkeypatch.setattr("parad.config.CONFIG_FILE", temp_config / "nonexistent" / "config.json")
+        monkeypatch.setattr("nexinal.config.CONFIG_FILE", temp_config / "nonexistent" / "config.json")
         config = load_config()
         assert config["api_url"] == DEFAULT_API_URL
         assert config["token"] is None
 
     def test_corrupt_config(self, temp_config, monkeypatch):
-        config_path = temp_config / ".parad" / "config.json"
+        config_path = temp_config / ".nexinal" / "config.json"
         config_path.write_text("NOT JSON {{{")
-        monkeypatch.setattr("parad.config.CONFIG_FILE", config_path)
+        monkeypatch.setattr("nexinal.config.CONFIG_FILE", config_path)
         config = load_config()
         assert config["api_url"] == DEFAULT_API_URL
 
@@ -155,15 +155,15 @@ commands:
 class TestCLIHelp:
     def test_main_help(self):
         from click.testing import CliRunner
-        from parad.cli import main
+        from nexinal.cli import main
         runner = CliRunner()
         result = runner.invoke(main, ["--help"])
         assert result.exit_code == 0
-        assert "parad" in result.output.lower() or "Nexuss" in result.output
+        assert "nexinal" in result.output.lower() or "Nexuss" in result.output
 
     def test_version(self):
         from click.testing import CliRunner
-        from parad.cli import main
+        from nexinal.cli import main
         runner = CliRunner()
         result = runner.invoke(main, ["--version"])
         assert result.exit_code == 0

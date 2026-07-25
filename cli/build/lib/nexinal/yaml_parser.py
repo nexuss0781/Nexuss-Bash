@@ -1,4 +1,4 @@
-"""YAML file parser for parad CLI."""
+"""YAML file parser for nexinal CLI."""
 
 from pathlib import Path
 from typing import List, Union, Optional

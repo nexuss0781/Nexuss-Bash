@@ -1,11 +1,11 @@
-# parad
+# nexinal
 
 CLI client for the **Nexuss Bash** remote execution API. Run shell commands on a remote server directly from your terminal.
 
 ## Installation
 
 ```bash
-pip install parad
+pip install nexinal
 ```
 
 Or from source:
@@ -20,33 +20,33 @@ pip install -e .
 
 ```bash
 # Authenticate
-parad auth YOUR_API_TOKEN
+nexinal auth YOUR_API_TOKEN
 
 # Run commands
-parad run "echo hello" "whoami" "ls /workspace"
+nexinal run "echo hello" "whoami" "ls /workspace"
 
 # Execute a YAML file
-parad execute runbook.yaml
+nexinal execute runbook.yaml
 
 # Check status
-parad status
+nexinal status
 ```
 
 ## Commands
 
 | Command | Description |
 |---------|-------------|
-| `parad auth <token>` | Save authentication token |
-| `parad run <commands...>` | Run shell commands sequentially |
-| `parad execute <yaml_file>` | Execute commands from a YAML file |
-| `parad status` | Show connection and token info |
-| `parad history` | List past runs |
-| `parad health` | Quick health check |
-| `parad sessions` | List active sessions |
-| `parad packages list` | List installed packages |
-| `parad packages install <name>` | Install a package |
-| `parad config` | Show or set API URL |
-| `parad logout` | Remove saved token |
+| `nexinal auth <token>` | Save authentication token |
+| `nexinal run <commands...>` | Run shell commands sequentially |
+| `nexinal execute <yaml_file>` | Execute commands from a YAML file |
+| `nexinal status` | Show connection and token info |
+| `nexinal history` | List past runs |
+| `nexinal health` | Quick health check |
+| `nexinal sessions` | List active sessions |
+| `nexinal packages list` | List installed packages |
+| `nexinal packages install <name>` | Install a package |
+| `nexinal config` | Show or set API URL |
+| `nexinal logout` | Remove saved token |
 
 ## YAML File Format
 
@@ -74,14 +74,14 @@ commands:
 
 ## Configuration
 
-Config is stored at `~/.parad/config.json`.
+Config is stored at `~/.nexinal/config.json`.
 
 ```bash
 # Set custom API URL
-parad config set https://my-server.example.com
+nexinal config set https://my-server.example.com
 
 # Show current config
-parad config
+nexinal config
 ```
 
 ## Environment

@@ -6,7 +6,7 @@ from typing import Optional, Any
 import requests
 from requests.exceptions import ConnectionError, HTTPError, RequestException, Timeout
 
-from parad.config import get_api_url, get_token
+from nexinal.config import get_api_url, get_token
 
 
 class APIError(Exception):
@@ -47,7 +47,7 @@ def api_get(path: str) -> dict:
     except HTTPError as e:
         status = e.response.status_code if e.response is not None else None
         if status == 401:
-            raise AuthError("Authentication failed. Run: parad auth <token>", status)
+            raise AuthError("Authentication failed. Run: nexinal auth <token>", status)
         if status == 404:
             raise APIError(f"Not found: {path}", status)
         raise APIError(f"HTTP {status}: {e}", status)
@@ -70,7 +70,7 @@ def api_post(path: str, data: Optional[dict] = None) -> dict:
     except HTTPError as e:
         status = e.response.status_code if e.response is not None else None
         if status == 401:
-            raise AuthError("Authentication failed. Run: parad auth <token>", status)
+            raise AuthError("Authentication failed. Run: nexinal auth <token>", status)
         if status == 404:
             raise APIError(f"Not found: {path}", status)
         body = ""
@@ -105,7 +105,7 @@ def api_post_file(path: str, file_path: str) -> dict:
     except HTTPError as e:
         status = e.response.status_code if e.response is not None else None
         if status == 401:
-            raise AuthError("Authentication failed. Run: parad auth <token>", status)
+            raise AuthError("Authentication failed. Run: nexinal auth <token>", status)
         raise APIError(f"HTTP {status}: {e}", status)
     except ConnectionError:
         raise ConnectionError_(f"Cannot connect to {url}. Check your network and API URL.")
@@ -128,7 +128,7 @@ def api_delete(path: str) -> dict:
     except HTTPError as e:
         status = e.response.status_code if e.response is not None else None
         if status == 401:
-            raise AuthError("Authentication failed. Run: parad auth <token>", status)
+            raise AuthError("Authentication failed. Run: nexinal auth <token>", status)
         raise APIError(f"HTTP {status}: {e}", status)
     except ConnectionError:
         raise ConnectionError_(f"Cannot connect to {url}. Check your network and API URL.")

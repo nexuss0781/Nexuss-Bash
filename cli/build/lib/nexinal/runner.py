@@ -1,4 +1,4 @@
-"""Command execution engine for parad CLI."""
+"""Command execution engine for nexinal CLI."""
 
 import time
 from typing import List, Union, Optional
@@ -7,10 +7,10 @@ from dataclasses import dataclass, field
 from rich.console import Console
 from rich.progress import Progress, SpinnerColumn, TextColumn
 
-from parad.api import api_post, APIError, AuthError, ConnectionError_
-from parad.config import set_last_run_id, get_token
-from parad.display import print_result, print_error, print_run_summary, console
-from parad.yaml_parser import CommandEntry
+from nexinal.api import api_post, APIError, AuthError, ConnectionError_
+from nexinal.config import set_last_run_id, get_token
+from nexinal.display import print_result, print_error, print_run_summary, console
+from nexinal.yaml_parser import CommandEntry
 
 
 @dataclass
@@ -26,7 +26,7 @@ def run_commands(
     stop_on_fail: bool = False,
 ) -> RunResult:
     if not get_token():
-        print_error("Not authenticated. Run: parad auth <token>")
+        print_error("Not authenticated. Run: nexinal auth <token>")
         return RunResult(success=False, error="Not authenticated")
 
     command_strings: List[str] = []

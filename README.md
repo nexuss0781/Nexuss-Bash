@@ -7,11 +7,11 @@
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Docker](https://img.shields.io/badge/docker-24.04-blue?logo=docker)](Dockerfile)
 [![Node](https://img.shields.io/badge/node-20 LTS-green?logo=node.js)](package.json)
-[![PyPI](https://img.shields.io/pypi/v/parad.svg)](https://pypi.org/project/parad/)
+[![PyPI](https://img.shields.io/pypi/v/nexinal.svg)](https://pypi.org/project/nexinal/)
 
 *One-liner command execution, YAML pipelines, file uploads, and runtime package management — all through a clean REST API, web dashboard, and CLI.*
 
-[Web Dashboard](#web-dashboard) · [CLI](#cli-parad) · [API](#api-reference) · [Docs](#documentation)
+[Web Dashboard](#web-dashboard) · [CLI](#cli-nexinal) · [API](#api-reference) · [Docs](#documentation)
 
 </div>
 
@@ -21,7 +21,7 @@
 
 Nexuss Bash is a **lightweight, secure remote execution platform** that runs inside a single Docker container with three ways to use it:
 
-- **CLI** — `parad run "echo hello"` — no curl needed
+- **CLI** — `nexinal run "echo hello"` — no curl needed
 - **Web Dashboard** — Terminal, command runner, file upload in your browser
 - **REST API** — 28 endpoints for full automation
 
@@ -35,50 +35,50 @@ Under the hood:
 
 ---
 
-## CLI (`parad`)
+## CLI (`nexinal`)
 
 No curl. No scripts. Just commands.
 
 ### Install
 
 ```bash
-pip install parad
+pip install nexinal
 ```
 
 ### Authenticate
 
 ```bash
-parad auth your-api-key
+nexinal auth your-api-key
 ```
 
 ### Run commands
 
 ```bash
 # Single command
-parad run "echo Hello"
+nexinal run "echo Hello"
 
 # Multiple commands — sequential, each waits for the previous
-parad run "apt-get update -qq" "apt-get install -y git" "git clone https://github.com/user/repo.git"
+nexinal run "apt-get update -qq" "apt-get install -y git" "git clone https://github.com/user/repo.git"
 
 # From a YAML file
-parad execute pipeline.yaml
+nexinal execute pipeline.yaml
 ```
 
 ### All commands
 
 | Command | Description |
 |---------|-------------|
-| `parad auth <token>` | Authenticate and save token |
-| `parad run <commands...>` | Run commands sequentially |
-| `parad execute <file.yaml>` | Execute commands from YAML file |
-| `parad health` | Quick health check |
-| `parad status` | Connection info and token status |
-| `parad history` | List past runs |
-| `parad sessions` | List active sessions |
-| `parad packages list` | List installed packages |
-| `parad packages install <name>` | Install a package |
-| `parad config` | Show/set API URL |
-| `parad logout` | Remove saved token |
+| `nexinal auth <token>` | Authenticate and save token |
+| `nexinal run <commands...>` | Run commands sequentially |
+| `nexinal execute <file.yaml>` | Execute commands from YAML file |
+| `nexinal health` | Quick health check |
+| `nexinal status` | Connection info and token status |
+| `nexinal history` | List past runs |
+| `nexinal sessions` | List active sessions |
+| `nexinal packages list` | List installed packages |
+| `nexinal packages install <name>` | Install a package |
+| `nexinal config` | Show/set API URL |
+| `nexinal logout` | Remove saved token |
 
 ### YAML file format
 
@@ -250,7 +250,7 @@ Full documentation in [`Documentations/markdowns/`](Documentations/markdowns/):
 | [Command Runner](Documentations/markdowns/command-runner.md) | `/run` endpoint, options, examples |
 | [Pipelines](Documentations/markdowns/pipelines.md) | DAG workflows, dependencies, multi-language |
 | [API Reference](Documentations/markdowns/api-reference.md) | All 28 endpoints, request/response formats |
-| [CLI Guide](Documentations/markdowns/cli-guide.md) | parad installation, commands, YAML format |
+| [CLI Guide](Documentations/markdowns/cli-guide.md) | nexinal installation, commands, YAML format |
 
 ---
 
@@ -281,7 +281,7 @@ Full documentation in [`Documentations/markdowns/`](Documentations/markdowns/):
 │                    Nexuss Bash                            │
 │                                                          │
 │  ┌─────────────┐  ┌──────────────┐  ┌──────────────┐   │
-│  │  CLI (parad) │  │ Web Dashboard│  │   REST API   │   │
+│  │  CLI (nexinal) │  │ Web Dashboard│  │   REST API   │   │
 │  │  pip install │  │  Next.js +   │  │  28 endpoints│   │
 │  │              │  │  TypeScript  │  │              │   │
 │  └──────┬───────┘  └──────┬───────┘  └──────┬───────┘   │
@@ -366,7 +366,7 @@ nexuss-bash/
 ├── cli/
 │   ├── setup.py
 │   ├── pyproject.toml
-│   └── parad/
+│   └── nexinal/
 │       ├── cli.py
 │       ├── api.py
 │       ├── config.py

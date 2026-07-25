@@ -1,19 +1,19 @@
-"""Main Click CLI for parad."""
+"""Main Click CLI for nexinal."""
 
 import sys
 from typing import List
 
 import click
 
-from parad import __version__
-from parad.config import (
+from nexinal import __version__
+from nexinal.config import (
     load_config, save_config, get_token, get_api_url,
     set_token, set_api_url, remove_token, get_last_run_id,
 )
-from parad.api import api_get, api_post, APIError, AuthError, ConnectionError_, test_connection
-from parad.runner import run_commands
-from parad.yaml_parser import parse_yaml_file, YAMLError, CommandEntry
-from parad.display import (
+from nexinal.api import api_get, api_post, APIError, AuthError, ConnectionError_, test_connection
+from nexinal.runner import run_commands
+from nexinal.yaml_parser import parse_yaml_file, YAMLError, CommandEntry
+from nexinal.display import (
     console, print_banner, print_result, print_error,
     print_success, print_warning, print_info, print_status,
     create_results_table,
@@ -21,9 +21,9 @@ from parad.display import (
 
 
 @click.group()
-@click.version_option(version=__version__, prog_name="parad")
+@click.version_option(version=__version__, prog_name="nexinal")
 def main():
-    """parad - CLI client for Nexuss Bash remote execution API."""
+    """nexinal - CLI client for Nexuss Bash remote execution API."""
     pass
 
 
@@ -40,7 +40,7 @@ def auth(token: str):
         resp = api_get("/health")
         server_name = resp.get("name", resp.get("server_name", "Nexuss Bash"))
         print_success(f"Connected to {server_name}")
-        print_success(f"Token saved to ~/.parad/config.json")
+        print_success(f"Token saved to ~/.nexinal/config.json")
     except ConnectionError_ as e:
         set_token(old_token or "")
         if old_token is None:
@@ -75,7 +75,7 @@ def run(commands: tuple, stop_on_fail: bool):
 
     Each argument is a separate command to execute.
 
-    Example: parad run "echo hello" "whoami" "ls /workspace"
+    Example: nexinal run "echo hello" "whoami" "ls /workspace"
     """
     if not commands:
         print_error("No commands provided")
@@ -138,7 +138,7 @@ def status():
 def history():
     """List past runs."""
     if not get_token():
-        print_error("Not authenticated. Run: parad auth <token>")
+        print_error("Not authenticated. Run: nexinal auth <token>")
         sys.exit(1)
 
     try:
@@ -208,7 +208,7 @@ def health():
 def sessions():
     """List active sessions."""
     if not get_token():
-        print_error("Not authenticated. Run: parad auth <token>")
+        print_error("Not authenticated. Run: nexinal auth <token>")
         sys.exit(1)
 
     try:
@@ -256,7 +256,7 @@ def packages():
 def packages_list():
     """List installed packages."""
     if not get_token():
-        print_error("Not authenticated. Run: parad auth <token>")
+        print_error("Not authenticated. Run: nexinal auth <token>")
         sys.exit(1)
 
     try:
@@ -297,7 +297,7 @@ def packages_list():
 def packages_install(name: str, manager: str):
     """Install a package on the remote server."""
     if not get_token():
-        print_error("Not authenticated. Run: parad auth <token>")
+        print_error("Not authenticated. Run: nexinal auth <token>")
         sys.exit(1)
 
     print_info(f"Installing {name} via {manager}...")
