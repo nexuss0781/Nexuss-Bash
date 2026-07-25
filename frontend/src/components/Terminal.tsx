@@ -1,165 +1,133 @@
 "use client";
 
-import { useEffect, useRef, useState, useCallback } from "react";
-import { useAuth } from "@/lib/auth-context";
-import { apiPost, apiDelete } from "@/lib/api";
+import { useState, useRef, useEffect, useCallback, KeyboardEvent } from "react";
 
-interface TerminalProps {
-  sessionId: string;
-  onClose?: () => void;
+export interface TermLine {
+  id: number;
+  type: "command" | "stdout" | "stderr" | "system" | "error";
+  content: string;
 }
 
-export default function Terminal({ sessionId, onClose }: TerminalProps) {
-  const { token } = useAuth();
-  const terminalRef = useRef<HTMLDivElement>(null);
-  const inputRef = useRef<HTMLTextAreaElement>(null);
-  const outputRef = useRef<HTMLDivElement>(null);
-  const [output, setOutput] = useState<string>("");
-  const [running, setRunning] = useState(false);
-  const [connected, setConnected] = useState(true);
+interface TerminalProps {
+  lines: TermLine[];
+  onRun: (cmd: string) => Promise<void>;
+  running: boolean;
+  prompt?: string;
+}
 
-  const scrollToBottom = useCallback(() => {
-    if (outputRef.current) {
-      outputRef.current.scrollTop = outputRef.current.scrollHeight;
-    }
-  }, []);
+export default function Terminal({ lines, onRun, running, prompt }: TerminalProps) {
+  const [input, setInput] = useState("");
+  const [cmdHistory, setCmdHistory] = useState<string[]>([]);
+  const [histIdx, setHistIdx] = useState(-1);
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const bottomRef = useRef<HTMLDivElement>(null);
+
+  const user = prompt || "root@nexuss";
 
   useEffect(() => {
-    scrollToBottom();
-  }, [output, scrollToBottom]);
+    bottomRef.current?.scrollIntoView({ behavior: "auto" });
+  }, [lines]);
 
-  const handleExec = useCallback(
-    async (command: string) => {
-      if (!command.trim() || !connected) return;
+  useEffect(() => {
+    inputRef.current?.focus();
+  }, []);
 
-      setRunning(true);
-      setOutput((prev) => prev + `$ ${command}\n`);
+  const focus = () => inputRef.current?.focus();
 
-      try {
-        const res = await apiPost<{ data: { stdout: string; stderr: string; exit_code: number } }>(
-          `/sessions/${sessionId}/exec`,
-          { command }
-        );
+  const handleSubmit = useCallback(async () => {
+    const cmd = input.trim();
+    if (!cmd || running) return;
+    setInput("");
+    setCmdHistory((p) => [...p, cmd]);
+    setHistIdx(-1);
+    await onRun(cmd);
+  }, [input, running, onRun]);
 
-        if (res.data.stdout) {
-          setOutput((prev) => prev + res.data.stdout);
+  const onKeyDown = useCallback((e: KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      handleSubmit();
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      setHistIdx((prev) => {
+        const next = prev + 1;
+        if (next < cmdHistory.length) {
+          setInput(cmdHistory[cmdHistory.length - 1 - next]);
+          return next;
         }
-        if (res.data.stderr) {
-          setOutput((prev) => prev + `\x1b[31m${res.data.stderr}\x1b[0m`);
+        return prev;
+      });
+    } else if (e.key === "ArrowDown") {
+      e.preventDefault();
+      setHistIdx((prev) => {
+        const next = prev - 1;
+        if (next >= 0) {
+          setInput(cmdHistory[cmdHistory.length - 1 - next]);
+          return next;
         }
-        if (res.data.exit_code !== 0) {
-          setOutput(
-            (prev) =>
-              prev + `\n[exit code: ${res.data.exit_code}]\n`
-          );
-        }
-      } catch (err: unknown) {
-        const msg = err instanceof Error ? err.message : "Command failed";
-        setOutput((prev) => prev + `Error: ${msg}\n`);
-      } finally {
-        setRunning(false);
-        if (inputRef.current) {
-          inputRef.current.value = "";
-          inputRef.current.focus();
-        }
-      }
-    },
-    [sessionId, connected]
-  );
-
-  const handleKeyDown = useCallback(
-    (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-      if (e.key === "Enter" && !e.shiftKey) {
-        e.preventDefault();
-        const value = inputRef.current?.value || "";
-        if (value.trim()) {
-          handleExec(value.trim());
-        }
-      }
-    },
-    [handleExec]
-  );
-
-  const handleDisconnect = useCallback(async () => {
-    try {
-      await apiDelete(`/sessions/${sessionId}`);
-    } catch {
-      // session may already be closed
+        setInput("");
+        return -1;
+      });
+    } else if (e.key === "l" && e.ctrlKey) {
+      e.preventDefault();
+    } else if (e.key === "c" && e.ctrlKey) {
+      e.preventDefault();
+      setInput("");
     }
-    setConnected(false);
-    onClose?.();
-  }, [sessionId, onClose]);
+  }, [cmdHistory, histIdx, handleSubmit]);
 
   return (
-    <div className="glass flex flex-col overflow-hidden rounded-xl">
-      {/* Terminal Header */}
-      <div className="flex items-center justify-between border-b border-border bg-surface px-4 py-2.5">
-        <div className="flex items-center gap-3">
-          <div className="flex gap-1.5">
-            <span className="h-3 w-3 rounded-full bg-danger/60" />
-            <span className="h-3 w-3 rounded-full bg-warning/60" />
-            <span className="h-3 w-3 rounded-full bg-success/60" />
+    <div className="flex flex-col h-full bg-[#0c0c14] font-mono text-[13px] leading-[1.35] select-text" onClick={focus}>
+      <div ref={scrollRef} className="flex-1 overflow-y-auto overflow-x-hidden px-3 py-2">
+        {lines.map((line) => (
+          <div key={line.id} className="whitespace-pre-wrap break-words">
+            {line.type === "command" && (
+              <span>
+                <span className="text-[#22d3ee] font-bold">{user}</span>
+                <span className="text-[#64748b]">:</span>
+                <span className="text-[#a78bfa]">~</span>
+                <span className="text-[#64748b]">$ </span>
+                <span className="text-[#e2e8f0]">{line.content}</span>
+              </span>
+            )}
+            {line.type === "stdout" && (
+              <span className="text-[#d4d4d8]">{line.content}</span>
+            )}
+            {line.type === "stderr" && (
+              <span className="text-[#f87171]">{line.content}</span>
+            )}
+            {line.type === "error" && (
+              <span className="text-[#fbbf24]">{line.content}</span>
+            )}
+            {line.type === "system" && (
+              <span className="text-[#64748b] italic">{line.content}</span>
+            )}
           </div>
-          <span className="font-mono text-xs text-text-dim">
-            session: {sessionId.slice(0, 8)}
-          </span>
-          <span className="flex items-center gap-1.5">
-            <span
-              className={`h-1.5 w-1.5 rounded-full ${
-                connected ? "bg-success animate-pulse" : "bg-danger"
-              }`}
-            />
-            <span className="text-xs text-text-dim">
-              {connected ? "active" : "closed"}
-            </span>
-          </span>
-        </div>
-        <button
-          onClick={handleDisconnect}
-          className="rounded px-3 py-1 text-xs font-medium text-danger/80 transition-colors hover:bg-danger/10 hover:text-danger"
-        >
-          Disconnect
-        </button>
+        ))}
+        <div ref={bottomRef} />
       </div>
 
-      {/* Terminal Output */}
-      <div
-        ref={outputRef}
-        className="flex-1 overflow-auto bg-bg p-4 font-mono text-sm leading-relaxed"
-        style={{ minHeight: "300px", maxHeight: "500px" }}
-      >
-        {output ? (
-          <pre className="whitespace-pre-wrap break-all text-text">{output}</pre>
-        ) : (
-          <div className="flex h-full items-center justify-center text-text-dim">
-            <p>Session ready. Type a command below.</p>
-          </div>
+      <div className="flex-shrink-0 flex items-center border-t border-[#1e1e2e] bg-[#0c0c14] px-3 py-1.5" onClick={focus}>
+        <span className="text-[#22d3ee] font-bold whitespace-nowrap">{user}</span>
+        <span className="text-[#64748b]">:</span>
+        <span className="text-[#a78bfa]">~</span>
+        <span className="text-[#64748b]">$ </span>
+        <input
+          ref={inputRef}
+          type="text"
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
+          onKeyDown={onKeyDown}
+          disabled={running}
+          className="flex-1 bg-transparent text-[#e2e8f0] outline-none font-mono caret-[#22d3ee]"
+          spellCheck={false}
+          autoComplete="off"
+          autoCapitalize="off"
+        />
+        {running && (
+          <span className="ml-2 text-[#22d3ee] animate-pulse">exec</span>
         )}
-      </div>
-
-      {/* Input Area */}
-      <div className="border-t border-border bg-surface p-3">
-        <div className="flex items-center gap-3">
-          <span className="font-mono text-sm text-primary-light">$</span>
-          <textarea
-            ref={inputRef}
-            onKeyDown={handleKeyDown}
-            placeholder={connected ? "Enter command..." : "Session closed"}
-            disabled={!connected || running}
-            rows={1}
-            className="flex-1 resize-none bg-transparent font-mono text-sm text-text placeholder-text-dim focus:outline-none"
-          />
-          <button
-            onClick={() => {
-              const value = inputRef.current?.value || "";
-              if (value.trim()) handleExec(value.trim());
-            }}
-            disabled={!connected || running}
-            className="rounded bg-primary px-3 py-1 text-xs font-medium text-white transition-all duration-200 hover:bg-primary-hover disabled:opacity-50"
-          >
-            {running ? "..." : "Send"}
-          </button>
-        </div>
       </div>
     </div>
   );

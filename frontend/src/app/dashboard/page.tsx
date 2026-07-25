@@ -1,348 +1,151 @@
 "use client";
 
-import { useState, useCallback, useEffect, useRef } from "react";
-import Navbar from "@/components/Navbar";
+import { useState, useCallback } from "react";
 import AuthGuard from "@/components/AuthGuard";
 import { AuthProvider } from "@/lib/auth-context";
-import { apiPost, apiGet, apiUpload } from "@/lib/api";
+import { apiPost, apiGet } from "@/lib/api";
+import Sidebar, { Session } from "@/components/Sidebar";
+import Terminal, { TermLine } from "@/components/Terminal";
+import SystemPanel from "@/components/SystemPanel";
 
-interface RunResult {
-  id: number;
-  name: string;
-  command: string;
-  status: string;
-  stdout: string;
-  stderr: string;
-  exit_code: number;
-  duration_ms: number;
-  timed_out: boolean;
-}
-
-interface RunEntry {
-  id: string;
-  status: string;
-  submitted_at: string;
-  started_at: string;
-  finished_at: string;
-  total_duration_ms: number;
-  progress: string;
-  current_step: string;
-  result_count: number;
-  results?: RunResult[];
-}
+let lineId = 0;
+function nextId() { return ++lineId; }
 
 function DashboardContent() {
-  const [commands, setCommands] = useState("");
-  const [results, setResults] = useState<RunResult[] | null>(null);
-  const [runId, setRunId] = useState<string | null>(null);
+  const [sessions, setSessions] = useState<Session[]>([]);
+  const [activeSession, setActiveSession] = useState<string | null>(null);
+  const [creating, setCreating] = useState(false);
+  const [termLines, setTermLines] = useState<TermLine[]>([
+    { id: nextId(), type: "system", content: "Nexuss Bash v1.1.0 — Containerized Remote Execution" },
+    { id: nextId(), type: "system", content: 'Type "help" for available commands.\n' },
+  ]);
   const [running, setRunning] = useState(false);
-  const [error, setError] = useState("");
-  const [history, setHistory] = useState<RunEntry[]>([]);
-  const [uploading, setUploading] = useState(false);
-  const [dragOver, setDragOver] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [panelCollapsed, setPanelCollapsed] = useState(true);
 
-  const fetchHistory = useCallback(async () => {
-    try {
-      const res = await apiGet<{ data: RunEntry[]; total: number }>("/run");
-      setHistory((res.data || []).slice(0, 20));
-    } catch {
-      // silently fail
-    }
+  const appendLine = useCallback((line: TermLine) => {
+    setTermLines((prev) => [...prev, line]);
   }, []);
 
-  useEffect(() => {
-    fetchHistory();
-  }, [fetchHistory]);
+  const appendLines = useCallback((lines: TermLine[]) => {
+    setTermLines((prev) => [...prev, ...lines]);
+  }, []);
 
-  const handleRun = useCallback(async () => {
-    if (!commands.trim()) return;
-    setRunning(true);
-    setError("");
-    setResults(null);
-
+  const refreshSessions = useCallback(async () => {
     try {
-      const cmds = commands
-        .split("\n")
-        .map((c) => c.trim())
-        .filter(Boolean);
-      const res = await apiPost<{ data: RunEntry }>("/run", {
-        commands: cmds,
-      });
-      setResults(res.data.results || []);
-      setRunId(res.data.id);
-      fetchHistory();
-    } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Execution failed");
-    } finally {
-      setRunning(false);
+      const res = await apiGet<{ data: Session[]; total: number }>("/sessions");
+      setSessions(res.data || []);
+    } catch {}
+  }, []);
+
+  const handleCreateSession = useCallback(async () => {
+    setCreating(true);
+    try {
+      const res = await apiPost<{ data: Session }>("/sessions");
+      const newSession = res.data;
+      setSessions((prev) => [...prev, newSession]);
+      setActiveSession(newSession.id);
+      appendLine({ id: nextId(), type: "system", content: `Session ${newSession.id.slice(0, 12)} created.` });
+    } catch (err) {
+      appendLine({ id: nextId(), type: "error", content: `Failed to create session: ${err instanceof Error ? err.message : "unknown error"}` });
     }
-  }, [commands, fetchHistory]);
+    setCreating(false);
+  }, [appendLine]);
 
-  const handleFileUpload = useCallback(
-    async (file: File) => {
-      setUploading(true);
-      setError("");
-      setResults(null);
-
-      try {
-        const res = await apiUpload<{ data: RunEntry }>("/run", file);
-        setResults(res.data.results || []);
-        setRunId(res.data.id);
-        fetchHistory();
-      } catch (err: unknown) {
-        setError(err instanceof Error ? err.message : "Upload failed");
-      } finally {
-        setUploading(false);
-      }
-    },
-    [fetchHistory]
-  );
-
-  const handleDrop = useCallback(
-    (e: React.DragEvent) => {
-      e.preventDefault();
-      setDragOver(false);
-      const file = e.dataTransfer.files[0];
-      if (file && (file.name.endsWith(".yaml") || file.name.endsWith(".yml") || file.name.endsWith(".json"))) {
-        handleFileUpload(file);
-      } else {
-        setError("Only .yaml, .yml, or .json files are accepted");
-      }
-    },
-    [handleFileUpload]
-  );
-
-  const runQuick = useCallback(async (cmd: string) => {
-    setRunning(true);
-    setError("");
-    setResults(null);
-    setCommands(cmd);
-
+  const handleDeleteSession = useCallback(async (id: string) => {
     try {
-      const res = await apiPost<{ data: RunEntry }>("/run", {
+      await apiPost(`/sessions/${id}/exec`, { command: "exit" }).catch(() => {});
+      const { apiDelete } = await import("@/lib/api");
+      await apiDelete(`/sessions/${id}`);
+      setSessions((prev) => prev.filter((s) => s.id !== id));
+      if (activeSession === id) setActiveSession(null);
+      appendLine({ id: nextId(), type: "system", content: `Session ${id.slice(0, 12)} closed.` });
+    } catch {}
+  }, [activeSession, appendLine]);
+
+  const handleRun = useCallback(async (cmd: string) => {
+    appendLine({ id: nextId(), type: "command", content: cmd });
+
+    if (cmd.trim() === "help") {
+      appendLines([
+        { id: nextId(), type: "stdout", content: "Available commands:" },
+        { id: nextId(), type: "stdout", content: "  help              Show this help" },
+        { id: nextId(), type: "stdout", content: "  clear             Clear terminal" },
+        { id: nextId(), type: "stdout", content: "  <shell command>   Execute any shell command" },
+        { id: nextId(), type: "stdout", content: "  sys               Open system panel" },
+        { id: nextId(), type: "stdout", content: "" },
+        { id: nextId(), type: "stdout", content: "Ctrl+C  Cancel input | Ctrl+L  Clear" },
+      ]);
+      return;
+    }
+
+    if (cmd.trim() === "clear") {
+      setTermLines([]);
+      return;
+    }
+
+    if (cmd.trim() === "sys") {
+      setPanelCollapsed(false);
+      return;
+    }
+
+    setRunning(true);
+    try {
+      const res = await apiPost<{ data: { results: Array<{ status: string; stdout: string; stderr: string; exit_code: number }> } }>("/run", {
         commands: [cmd],
       });
-      setResults(res.data.results || []);
-      setRunId(res.data.id);
-    } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Execution failed");
-    } finally {
-      setRunning(false);
+      const results = res.data.results || [];
+      for (const r of results) {
+        if (r.stdout) {
+          appendLine({ id: nextId(), type: "stdout", content: r.stdout });
+        }
+        if (r.stderr) {
+          appendLine({ id: nextId(), type: "stderr", content: r.stderr });
+        }
+        if (r.exit_code !== 0 && r.status !== "completed") {
+          appendLine({ id: nextId(), type: "error", content: `exit code: ${r.exit_code}` });
+        }
+      }
+    } catch (err) {
+      appendLine({ id: nextId(), type: "error", content: err instanceof Error ? err.message : "Request failed" });
     }
-  }, []);
+    setRunning(false);
+  }, [appendLine, appendLines]);
 
   return (
-    <div className="min-h-screen bg-bg">
-      <Navbar />
-      <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-        <AuthGuard>
-          {/* Quick Actions */}
-          <div className="mb-8">
-            <h2 className="mb-4 text-sm font-semibold uppercase tracking-wider text-text-dim">
-              Quick Actions
-            </h2>
-            <div className="flex flex-wrap gap-3">
-              {[
-                { label: "Health Check", cmd: "curl -s http://localhost:3000/health" },
-                { label: "List Packages", cmd: "apt list --installed 2>/dev/null | head -20" },
-                { label: "System Info", cmd: "uname -a && uptime && df -h /workspace" },
-                { label: "Disk Usage", cmd: "du -sh /workspace/* 2>/dev/null || echo 'empty'" },
-                { label: "Environment", cmd: "env | sort" },
-              ].map((item) => (
-                <button
-                  key={item.label}
-                  onClick={() => runQuick(item.cmd)}
-                  disabled={running}
-                  className="rounded-lg border border-border bg-surface px-4 py-2 text-sm font-medium text-text-muted transition-all duration-200 hover:border-primary/30 hover:text-text disabled:opacity-50"
-                >
-                  {item.label}
-                </button>
-              ))}
+    <div className="flex flex-col h-screen bg-[#0c0c14] overflow-hidden">
+      <AuthGuard>
+        <div className="flex flex-1 min-h-0">
+          <Sidebar
+            sessions={sessions}
+            activeId={activeSession}
+            onSelect={setActiveSession}
+            onCreate={handleCreateSession}
+            onDelete={handleDeleteSession}
+            creating={creating}
+          />
+          <div className="flex-1 flex flex-col min-w-0">
+            <div className="flex items-center h-8 bg-[#0f0f1a] border-b border-[#1e1e2e] px-3 flex-shrink-0 select-none">
+              <span className="text-[11px] text-[#64748b]">
+                {activeSession ? `session: ${activeSession.slice(0, 12)}` : "no session"}
+              </span>
+              <span className="ml-auto text-[11px] text-[#475569]">
+                nexuss-bash ~ /workspace
+              </span>
+            </div>
+            <div className="flex-1 min-h-0">
+              <Terminal
+                lines={termLines}
+                onRun={handleRun}
+                running={running}
+              />
             </div>
           </div>
-
-          <div className="grid gap-8 lg:grid-cols-3">
-            {/* Command Input */}
-            <div className="lg:col-span-2">
-              <div className="glass rounded-xl p-6">
-                <div className="mb-4 flex items-center justify-between">
-                  <h2 className="text-lg font-semibold">Command Runner</h2>
-                  {runId && (
-                    <span className="rounded-md bg-surface px-2 py-1 font-mono text-xs text-text-dim">
-                      {runId}
-                    </span>
-                  )}
-                </div>
-
-                <textarea
-                  value={commands}
-                  onChange={(e) => setCommands(e.target.value)}
-                  placeholder="Enter commands, one per line...&#10;echo Hello&#10;whoami&#10;ls -la"
-                  rows={8}
-                  className="w-full rounded-lg border border-border bg-bg p-4 font-mono text-sm text-text placeholder-text-dim transition-all duration-200 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/30"
-                />
-
-                <div className="mt-4 flex items-center gap-3">
-                  <button
-                    onClick={handleRun}
-                    disabled={running || !commands.trim()}
-                    className="flex items-center gap-2 rounded-lg bg-primary px-6 py-2.5 text-sm font-semibold text-white transition-all duration-200 hover:bg-primary-hover disabled:cursor-not-allowed disabled:opacity-50"
-                  >
-                    {running ? (
-                      <>
-                        <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
-                        Running...
-                      </>
-                    ) : (
-                      "Run"
-                    )}
-                  </button>
-
-                  <button
-                    onClick={() => fileInputRef.current?.click()}
-                    disabled={uploading}
-                    className="rounded-lg border border-border bg-surface px-4 py-2.5 text-sm font-medium text-text-muted transition-all duration-200 hover:border-primary/30 hover:text-text disabled:opacity-50"
-                  >
-                    {uploading ? "Uploading..." : "Upload YAML"}
-                  </button>
-
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    accept=".yaml,.yml,.json"
-                    onChange={(e) => {
-                      const file = e.target.files?.[0];
-                      if (file) handleFileUpload(file);
-                    }}
-                    className="hidden"
-                  />
-                </div>
-
-                {/* YAML Drop Zone */}
-                <div
-                  onDragOver={(e) => {
-                    e.preventDefault();
-                    setDragOver(true);
-                  }}
-                  onDragLeave={() => setDragOver(false)}
-                  onDrop={handleDrop}
-                  className={`drop-zone mt-4 rounded-lg border-2 border-dashed p-6 text-center transition-all duration-200 ${
-                    dragOver
-                      ? "border-primary bg-primary/5"
-                      : "border-border hover:border-border-light"
-                  }`}
-                >
-                  <p className="text-sm text-text-dim">
-                    Drag and drop a .yaml or .json file here
-                  </p>
-                </div>
-
-                {error && (
-                  <div className="mt-4 rounded-lg border border-danger/20 bg-danger/5 px-4 py-3 text-sm text-danger">
-                    {error}
-                  </div>
-                )}
-
-                {/* Results */}
-                {results && results.length > 0 && (
-                  <div className="mt-6 space-y-3">
-                    <h3 className="text-sm font-semibold text-text-muted">
-                      Results ({results.length} commands)
-                    </h3>
-                    {results.map((result) => (
-                      <div
-                        key={result.id}
-                        className="rounded-lg border border-border bg-bg p-4"
-                      >
-                        <div className="mb-2 flex items-center gap-3">
-                          <span className="font-mono text-xs text-text-dim">
-                            {result.name || `step_${result.id}`}
-                          </span>
-                          <span
-                            className={`rounded px-2 py-0.5 text-xs font-bold ${
-                              result.status === "completed"
-                                ? "bg-success/10 text-success"
-                                : result.status === "failed"
-                                  ? "bg-danger/10 text-danger"
-                                  : "bg-warning/10 text-warning"
-                            }`}
-                          >
-                            {result.status}
-                          </span>
-                          <span className="font-mono text-xs text-text-dim">
-                            exit {result.exit_code} | {result.duration_ms}ms
-                          </span>
-                        </div>
-
-                        <pre className="mb-1 font-mono text-xs text-text-dim">
-                          $ {result.command}
-                        </pre>
-
-                        {result.stdout && (
-                          <pre className="mb-2 whitespace-pre-wrap break-all rounded bg-surface p-3 font-mono text-xs text-text">
-                            {result.stdout}
-                          </pre>
-                        )}
-
-                        {result.stderr && (
-                          <pre className="whitespace-pre-wrap break-all rounded bg-danger/5 p-3 font-mono text-xs text-danger/80">
-                            {result.stderr}
-                          </pre>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* History Sidebar */}
-            <div>
-              <div className="glass rounded-xl p-6">
-                <h2 className="mb-4 text-lg font-semibold">History</h2>
-
-                {history.length === 0 ? (
-                  <p className="text-sm text-text-dim">No runs yet</p>
-                ) : (
-                  <div className="space-y-3">
-                    {history.map((entry) => (
-                      <button
-                        key={entry.id}
-                        onClick={() => {
-                          setResults(entry.results || []);
-                          setRunId(entry.id);
-                        }}
-                        className="w-full rounded-lg border border-border bg-surface p-3 text-left transition-all duration-200 hover:border-primary/20"
-                      >
-                        <div className="flex items-center justify-between">
-                          <span className="font-mono text-xs text-text-muted">
-                            {entry.id.slice(0, 16)}
-                          </span>
-                          <span
-                            className={`text-xs font-medium ${
-                              entry.status === "completed"
-                                ? "text-success"
-                                : entry.status === "failed"
-                                  ? "text-danger"
-                                  : "text-warning"
-                            }`}
-                          >
-                            {entry.status}
-                          </span>
-                        </div>
-                        <div className="mt-1 text-xs text-text-dim">
-                          {entry.result_count || 0} commands
-                        </div>
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-        </AuthGuard>
-      </div>
+        </div>
+        <SystemPanel
+          collapsed={panelCollapsed}
+          onToggle={() => setPanelCollapsed((p) => !p)}
+        />
+      </AuthGuard>
     </div>
   );
 }

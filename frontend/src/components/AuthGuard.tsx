@@ -35,62 +35,39 @@ export default function AuthGuard({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <div className="flex min-h-[60vh] items-center justify-center">
-      <div className="glass w-full max-w-md rounded-2xl p-8">
-        <div className="mb-8 text-center">
-          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-primary/10">
-            <span className="text-3xl">&#9889;</span>
-          </div>
-          <h2 className="text-2xl font-bold text-text">Connect to Nexuss Bash</h2>
-          <p className="mt-2 text-sm text-text-muted">
-            Enter your API key to access the dashboard
-          </p>
+    <div className="flex items-center justify-center min-h-screen bg-[#0c0c14]">
+      <div className="w-full max-w-sm border border-[#1e1e2e] rounded bg-[#0f0f1a] p-6">
+        <div className="mb-6 text-center">
+          <div className="text-2xl font-mono text-[#22d3ee] font-bold mb-1">nexuss@bash</div>
+          <div className="text-[11px] text-[#475569] font-mono">authentication required</div>
         </div>
 
-        <form onSubmit={handleConnect} className="space-y-4">
+        <form onSubmit={handleConnect} className="space-y-3">
           <div>
-            <label
-              htmlFor="api-key"
-              className="mb-2 block text-sm font-medium text-text-muted"
-            >
-              API Key
-            </label>
+            <label className="block text-[11px] text-[#64748b] mb-1 font-mono">API_KEY</label>
             <input
-              id="api-key"
               type="password"
               value={apiKey}
               onChange={(e) => setApiKey(e.target.value)}
-              placeholder="Enter your API key"
+              placeholder="enter your api key"
               required
-              className="w-full rounded-lg border border-border bg-surface px-4 py-3 font-mono text-sm text-text placeholder-text-dim transition-all duration-200 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/30"
+              className="w-full bg-[#1a1a2e] border border-[#1e1e2e] text-[#e2e8f0] text-[13px] font-mono rounded px-3 py-2 outline-none focus:border-[#22d3ee] placeholder-[#475569]"
+              autoFocus
             />
           </div>
 
           {error && (
-            <div className="rounded-lg border border-danger/20 bg-danger/5 px-4 py-3 text-sm text-danger">
-              {error}
-            </div>
+            <div className="text-[12px] text-[#f87171] font-mono">{error}</div>
           )}
 
           <button
             type="submit"
             disabled={loading || !apiKey.trim()}
-            className="w-full rounded-lg bg-primary px-4 py-3 text-sm font-semibold text-white transition-all duration-200 hover:bg-primary-hover disabled:cursor-not-allowed disabled:opacity-50"
+            className="w-full py-2 bg-[#22d3ee]/10 border border-[#22d3ee]/30 text-[#22d3ee] text-[12px] font-mono rounded hover:bg-[#22d3ee]/20 disabled:opacity-40"
           >
-            {loading ? (
-              <span className="flex items-center justify-center gap-2">
-                <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
-                Testing connection...
-              </span>
-            ) : (
-              "Connect"
-            )}
+            {loading ? "connecting..." : "connect"}
           </button>
         </form>
-
-        <p className="mt-6 text-center text-xs text-text-dim">
-          Find your API key in the server configuration or environment variables.
-        </p>
       </div>
     </div>
   );

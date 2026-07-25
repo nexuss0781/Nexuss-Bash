@@ -2,18 +2,8 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Nexuss Bash - Containerized Remote Execution",
-  description:
-    "One-liner command execution, YAML pipelines, file uploads, and runtime package management through a clean REST API.",
-  keywords: [
-    "remote execution",
-    "container",
-    "bash",
-    "API",
-    "DevOps",
-    "CLI",
-    "pipelines",
-  ],
+  title: "Nexuss Bash",
+  description: "Containerized Remote Execution Platform",
 };
 
 export default function RootLayout({
@@ -22,8 +12,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className="dark">
-      <body className="bg-bg text-text min-h-screen antialiased">
+    <html lang="en">
+      <body className="bg-[#0c0c14] text-[#e2e8f0] min-h-screen antialiased">
         {children}
       </body>
     </html>
