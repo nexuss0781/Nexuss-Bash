@@ -7,20 +7,28 @@ import { AuthProvider } from "@/lib/auth-context";
 import { apiPost, apiGet, apiUpload } from "@/lib/api";
 
 interface RunResult {
-  index: number;
+  id: number;
+  name: string;
+  command: string;
   status: string;
   stdout: string;
   stderr: string;
   exit_code: number;
   duration_ms: number;
+  timed_out: boolean;
 }
 
 interface RunEntry {
-  run_id: string;
+  id: string;
   status: string;
+  submitted_at: string;
   started_at: string;
-  completed_at: string;
-  results: RunResult[];
+  finished_at: string;
+  total_duration_ms: number;
+  progress: string;
+  current_step: string;
+  result_count: number;
+  results?: RunResult[];
 }
 
 function DashboardContent() {
@@ -61,8 +69,8 @@ function DashboardContent() {
       const res = await apiPost<{ data: RunEntry }>("/run", {
         commands: cmds,
       });
-      setResults(res.data.results);
-      setRunId(res.data.run_id);
+      setResults(res.data.results || []);
+      setRunId(res.data.id);
       fetchHistory();
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Execution failed");
@@ -79,8 +87,8 @@ function DashboardContent() {
 
       try {
         const res = await apiUpload<{ data: RunEntry }>("/run", file);
-        setResults(res.data.results);
-        setRunId(res.data.run_id);
+        setResults(res.data.results || []);
+        setRunId(res.data.id);
         fetchHistory();
       } catch (err: unknown) {
         setError(err instanceof Error ? err.message : "Upload failed");
@@ -115,8 +123,8 @@ function DashboardContent() {
       const res = await apiPost<{ data: RunEntry }>("/run", {
         commands: [cmd],
       });
-      setResults(res.data.results);
-      setRunId(res.data.run_id);
+      setResults(res.data.results || []);
+      setRunId(res.data.id);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Execution failed");
     } finally {
@@ -244,15 +252,18 @@ function DashboardContent() {
                     </h3>
                     {results.map((result) => (
                       <div
-                        key={result.index}
+                        key={result.id}
                         className="rounded-lg border border-border bg-bg p-4"
                       >
                         <div className="mb-2 flex items-center gap-3">
+                          <span className="font-mono text-xs text-text-dim">
+                            {result.name || `step_${result.id}`}
+                          </span>
                           <span
                             className={`rounded px-2 py-0.5 text-xs font-bold ${
-                              result.status === "PASS"
+                              result.status === "completed"
                                 ? "bg-success/10 text-success"
-                                : result.status === "FAIL"
+                                : result.status === "failed"
                                   ? "bg-danger/10 text-danger"
                                   : "bg-warning/10 text-warning"
                             }`}
@@ -263,6 +274,10 @@ function DashboardContent() {
                             exit {result.exit_code} | {result.duration_ms}ms
                           </span>
                         </div>
+
+                        <pre className="mb-1 font-mono text-xs text-text-dim">
+                          $ {result.command}
+                        </pre>
 
                         {result.stdout && (
                           <pre className="mb-2 whitespace-pre-wrap break-all rounded bg-surface p-3 font-mono text-xs text-text">
@@ -293,16 +308,16 @@ function DashboardContent() {
                   <div className="space-y-3">
                     {history.map((entry) => (
                       <button
-                        key={entry.run_id}
+                        key={entry.id}
                         onClick={() => {
-                          setResults(entry.results);
-                          setRunId(entry.run_id);
+                          setResults(entry.results || []);
+                          setRunId(entry.id);
                         }}
                         className="w-full rounded-lg border border-border bg-surface p-3 text-left transition-all duration-200 hover:border-primary/20"
                       >
                         <div className="flex items-center justify-between">
                           <span className="font-mono text-xs text-text-muted">
-                            {entry.run_id.slice(0, 8)}
+                            {entry.id.slice(0, 16)}
                           </span>
                           <span
                             className={`text-xs font-medium ${
@@ -317,7 +332,7 @@ function DashboardContent() {
                           </span>
                         </div>
                         <div className="mt-1 text-xs text-text-dim">
-                          {entry.results?.length || 0} commands
+                          {entry.result_count || 0} commands
                         </div>
                       </button>
                     ))}
