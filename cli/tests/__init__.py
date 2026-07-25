@@ -1,1 +1,1 @@
-"""Tests for parad CLI."""
+"""Tests for nexinal CLI."""

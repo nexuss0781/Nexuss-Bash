@@ -38,7 +38,7 @@ function LandingPage() {
               <span className="text-[#64748b]">:</span>
               <span className="text-[#a78bfa]">~</span>
               <span className="text-[#64748b]">$ </span>
-              <span className="text-[#e2e8f0]">pip install parad && parad run "echo hello"</span>
+              <span className="text-[#e2e8f0]">pip install nexinal && nexinal run "echo hello"</span>
             </code>
           </pre>
         </div>

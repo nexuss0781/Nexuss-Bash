@@ -3,8 +3,8 @@ requires = ["setuptools>=61.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "parad"
-version = "1.0.1"
+name = "nexinal"
+version = "1.0.2"
 description = "CLI client for Nexuss Bash remote execution API"
 readme = "README.md"
 license = {text = "MIT"}
@@ -12,7 +12,7 @@ requires-python = ">=3.8"
 authors = [
     {name = "Nexuss", email = "nexuss@proton.me"},
 ]
-keywords = ["cli", "bash", "remote", "execution", "api", "nexuss", "parad"]
+keywords = ["cli", "bash", "remote", "execution", "api", "nexuss", "nexinal"]
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
@@ -42,7 +42,7 @@ Homepage = "https://github.com/nexuss0781/Nexuss-Bash"
 Source = "https://github.com/nexuss0781/Nexuss-Bash"
 
 [project.scripts]
-parad = "parad.cli:main"
+nexinal = "nexinal.cli:main"
 
 [project.optional-dependencies]
 dev = [
@@ -51,4 +51,4 @@ dev = [
 ]
 
 [tool.setuptools.packages.find]
-include = ["parad*"]
+include = ["nexinal*"]

@@ -1,11 +1,11 @@
-"""Configuration manager for parad CLI."""
+"""Configuration manager for nexinal CLI."""
 
 import json
 import os
 from pathlib import Path
 from typing import Optional
 
-CONFIG_DIR = Path.home() / ".parad"
+CONFIG_DIR = Path.home() / ".nexinal"
 CONFIG_FILE = CONFIG_DIR / "config.json"
 
 DEFAULT_API_URL = "https://nexuss-bash.onrender.com"
