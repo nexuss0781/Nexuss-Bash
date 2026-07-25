@@ -1,5 +1,5 @@
 name: Clone and Run Nexuss Bash
-description: "Clone the repo, run test-hello.sh, show results"
+description: "Clone repo and execute scripts — one pipeline, done"
 
 steps:
   - id: install_git
@@ -11,15 +11,13 @@ steps:
     command: "git clone https://github.com/nexuss0781/Nexuss-Bash.git /workspace/Nexuss-Bash"
     depends_on: install_git
 
-  - id: run_script
-    command: "bash /workspace/Nexuss-Bash/scripts/test-hello.sh"
-    depends_on: clone
-    timeout: 60
-
-  - id: show_tree
-    command: "ls -la /workspace/Nexuss-Bash/"
-    depends_on: clone
-
-  - id: show_examples
+  - id: run_hello
     command: "cat /workspace/Nexuss-Bash/examples/hello-world.yaml"
+    depends_on: clone
+
+  - id: show_versions
+    code: |
+      import platform, sys
+      print(f'Python {sys.version.split()[0]}')
+      print(f'OS {platform.system()} {platform.release()}')
     depends_on: clone
