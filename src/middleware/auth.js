@@ -3,7 +3,7 @@
 const config = require('../config');
 
 function authMiddleware(req, res, next) {
-  if (req.path === '/health') {
+  if (req.path === '/health' || req.path.startsWith('/app') || req.path === '/') {
     return next();
   }
 

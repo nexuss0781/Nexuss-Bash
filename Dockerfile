@@ -18,7 +18,10 @@ RUN echo 'runner ALL=(root) NOPASSWD: /usr/bin/apt-get install -y *' > /etc/sudo
 WORKDIR /app
 COPY package*.json ./
 RUN npm install --omit=dev
+
 COPY . .
+
+RUN cd frontend && npm install && npm run build && cd ..
 
 RUN mkdir -p /workspace/sessions /workspace/jobs /workspace/logs /workspace/uploads && \
     chown -R runner:runner /workspace
