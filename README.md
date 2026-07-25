@@ -7,10 +7,11 @@
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Docker](https://img.shields.io/badge/docker-24.04-blue?logo=docker)](Dockerfile)
 [![Node](https://img.shields.io/badge/node-20 LTS-green?logo=node.js)](package.json)
+[![PyPI](https://img.shields.io/pypi/v/parad.svg)](https://pypi.org/project/parad/)
 
-*One-liner command execution, YAML pipelines, file uploads, and runtime package management — all through a clean REST API.*
+*One-liner command execution, YAML pipelines, file uploads, and runtime package management — all through a clean REST API, web dashboard, and CLI.*
 
-[Getting Started](#-quick-start) · [API Reference](#-api-reference) · [Architecture](#-architecture)
+[Web Dashboard](#web-dashboard) · [CLI](#cli-parad) · [API](#api-reference) · [Docs](#documentation)
 
 </div>
 
@@ -18,32 +19,108 @@
 
 ## What is Nexuss Bash?
 
-Nexuss Bash is a **lightweight, secure remote execution platform** that runs inside a single Docker container:
+Nexuss Bash is a **lightweight, secure remote execution platform** that runs inside a single Docker container with three ways to use it:
 
-- **Command Runner** — Send a list of commands, get results back. Manager handles everything.
-- **YAML Pipelines** — Define multi-step workflows with dependencies and parallel steps
+- **CLI** — `parad run "echo hello"` — no curl needed
+- **Web Dashboard** — Terminal, command runner, file upload in your browser
+- **REST API** — 28 endpoints for full automation
+
+Under the hood:
+- **Command Runner** — Sequential task manager monitors each command's exit, controls flow
+- **YAML Pipelines** — DAG-based workflows with dependencies and parallel steps
 - **PTY Sessions** — Interactive bash shells with command history and logs
 - **Multi-Language Jobs** — Execute Python, Node.js, Bash, or PHP scripts
-- **File Upload** — Upload files and execute them remotely
 - **Package Management** — Install apt/pip/npm/composer packages at runtime
 - **Resource Monitoring** — Real-time RAM/disk/CPU tracking with auto-throttling
-- **Secure Isolation** — Unprivileged user, cgroup limits, constant-time auth
 
 ---
 
-## Quick Start
+## CLI (`parad`)
+
+No curl. No scripts. Just commands.
+
+### Install
 
 ```bash
-# Build and run
-docker build -t nexuss-bash .
-docker run -d -p 3000:3000 -e API_KEY="your-key" nexuss-bash
-
-# Send commands, get results — one call
-curl -X POST http://localhost:3000/run \
-  -H "Authorization: Bearer your-key" \
-  -H "Content-Type: application/json" \
-  -d '{"commands":["echo Hello","whoami","ls /workspace"]}'
+pip install parad
 ```
+
+### Authenticate
+
+```bash
+parad auth your-api-key
+```
+
+### Run commands
+
+```bash
+# Single command
+parad run "echo Hello"
+
+# Multiple commands — sequential, each waits for the previous
+parad run "apt-get update -qq" "apt-get install -y git" "git clone https://github.com/user/repo.git"
+
+# From a YAML file
+parad execute pipeline.yaml
+```
+
+### All commands
+
+| Command | Description |
+|---------|-------------|
+| `parad auth <token>` | Authenticate and save token |
+| `parad run <commands...>` | Run commands sequentially |
+| `parad execute <file.yaml>` | Execute commands from YAML file |
+| `parad health` | Quick health check |
+| `parad status` | Connection info and token status |
+| `parad history` | List past runs |
+| `parad sessions` | List active sessions |
+| `parad packages list` | List installed packages |
+| `parad packages install <name>` | Install a package |
+| `parad config` | Show/set API URL |
+| `parad logout` | Remove saved token |
+
+### YAML file format
+
+```yaml
+commands:
+  - name: install
+    command: "apt-get update -qq && apt-get install -y git"
+    timeout: 120
+    stop_on_fail: true
+
+  - name: clone
+    command: "git clone https://github.com/user/repo.git /workspace/repo"
+
+  - name: run
+    command: "node /workspace/repo/index.js"
+```
+
+---
+
+## Web Dashboard
+
+A Next.js frontend with dark mode, terminal access, and command runner.
+
+### Setup
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+Open `http://localhost:3000`.
+
+### Pages
+
+| Page | Description |
+|------|-------------|
+| **Landing** | Hero, features, how-it-works, API example |
+| **Dashboard** | Command runner, YAML upload, results display, history |
+| **Terminal** | Interactive PTY shell via xterm.js |
+| **Settings** | Token management, connection config |
+| **Docs** | Full documentation with markdown rendering |
 
 ---
 
@@ -90,153 +167,43 @@ curl -X POST http://localhost:3000/run \
 | `DELETE` | `/packages/:name` | Remove package |
 | `GET` | `/resources` | Resource usage |
 
----
-
-## Command Runner (`POST /run`)
-
-The primary interface. Send a list of commands, the manager runs them one by one, monitors each for completion, and returns all results.
-
-### How It Works
-
-```
-Your commands → Manager spawns process → waits for exit → records result → next command
-                                                              ↑
-                                                     timeout is safety net only
-```
-
-Each command runs to completion. The manager doesn't guess time — it **listens** for the process to finish.
-
-### JSON — inline commands
+### Quick example
 
 ```bash
+# Send commands, get results — one call
+curl -X POST https://nexuss-bash.onrender.com/run \
+  -H "Authorization: Bearer your-key" \
+  -H "Content-Type: application/json" \
+  -d '{"commands":["echo Hello","whoami","ls /workspace"]}'
+```
+
+### Command Runner (`POST /run`)
+
+The primary interface. The manager runs commands sequentially, monitors each for completion, and returns all results.
+
+```bash
+# JSON — inline commands
 curl -X POST http://localhost:3000/run \
   -H "Authorization: Bearer your-key" \
   -H "Content-Type: application/json" \
   -d '{"commands":["echo Hello","whoami","python3 -c \"print(2+2)\""]}'
-```
 
-### YAML file upload
-
-```bash
+# YAML file upload
 curl -X POST http://localhost:3000/run \
   -H "Authorization: Bearer your-key" \
   -F "file=@commands.yaml"
 ```
 
-### YAML format
-
-```yaml
-commands:
-  - "apt-get update -qq && apt-get install -y git"
-  - "git clone https://github.com/user/repo.git /workspace/repo"
-  - "node /workspace/repo/index.js"
-```
-
-### Command options
-
-Each command can be a string or an object with options:
-
-```yaml
-commands:
-  # Simple string — runs as-is
-  - "echo Hello"
-
-  # Object — full control
-  - name: install_deps
-    command: "apt-get update -qq && apt-get install -y git"
-    timeout: 120
-    stop_on_fail: true
-
-  - name: clone
-    command: "git clone https://github.com/user/repo.git /workspace/repo"
-
-  - name: run
-    command: "node /workspace/repo/index.js"
-```
-
-### Command options table
+**Command options:**
 
 | Field | Type | Default | Description |
 |-------|------|---------|-------------|
-| `name` | string | `step_N` | Label for this command (shown in results) |
-| `command` | string | (required) | Shell command to execute |
-| `timeout` | int (sec) | 300 | Safety net — kill if hung (commands normally exit on their own) |
-| `stop_on_fail` | bool | `false` | If `true`, halt the chain when this command fails. Remaining commands are skipped. |
+| `name` | string | `step_N` | Label for results |
+| `command` | string | (required) | Shell command |
+| `timeout` | int (sec) | 300 | Safety net — kill if hung |
+| `stop_on_fail` | bool | `false` | Halt chain on failure |
 
-### Stop on fail
-
-By default, the manager continues to the next command even if one fails. Set `stop_on_fail: true` to halt the chain:
-
-```yaml
-commands:
-  - name: build
-    command: "make build"
-    stop_on_fail: true
-
-  - name: test
-    command: "make test"
-    stop_on_fail: true
-
-  - name: deploy
-    command: "make deploy"
-```
-
-If `build` fails → `test` and `deploy` are skipped. If `build` passes but `test` fails → `deploy` is skipped.
-
-### Response format
-
-```json
-{
-  "data": {
-    "id": "run_1784973527967_7u7raa",
-    "status": "completed",
-    "submitted_at": "2026-07-25T04:08:15.793Z",
-    "started_at": "2026-07-25T04:08:15.793Z",
-    "finished_at": "2026-07-25T04:08:16.408Z",
-    "total_duration_ms": 615,
-    "progress": "3/3",
-    "results": [
-      {
-        "id": 1,
-        "name": "step_1",
-        "command": "echo Hello",
-        "status": "completed",
-        "exit_code": 0,
-        "duration_ms": 51,
-        "stdout": "Hello\n",
-        "stderr": "",
-        "timed_out": false
-      },
-      {
-        "id": 2,
-        "name": "step_2",
-        "command": "exit 1",
-        "status": "failed",
-        "exit_code": 1,
-        "duration_ms": 7,
-        "stdout": "",
-        "stderr": "",
-        "timed_out": false
-      },
-      {
-        "id": 3,
-        "name": "step_3",
-        "command": "echo done",
-        "status": "skipped",
-        "exit_code": null,
-        "duration_ms": 0,
-        "stdout": "",
-        "stderr": "Skipped: previous step failed (stop_on_fail)",
-        "timed_out": false
-      }
-    ]
-  }
-}
-```
-
----
-
-## Pipelines (`POST /pipelines/run`)
+### Pipelines (`POST /pipelines/run`)
 
 For complex workflows with dependencies, parallel steps, and multi-language support:
 
@@ -245,9 +212,7 @@ name: "Deploy Pipeline"
 steps:
   - id: build
     language: python3
-    code: |
-      import subprocess
-      subprocess.run(["pip", "install", "--break-system-packages", "pandas"])
+    code: "import subprocess; subprocess.run(['pip', 'install', '--break-system-packages', 'pandas'])"
 
   - id: test
     language: python3
@@ -255,7 +220,6 @@ steps:
     depends_on: build
 
   - id: notify
-    language: bash
     command: "echo 'Pipeline complete'"
     always_run: true
 ```
@@ -268,11 +232,25 @@ steps:
 | `command` | string | null | Shell command |
 | `code` | string | null | Code for language runtime |
 | `language` | string | `bash` | `bash`, `python3`, `node`, `php` |
-| `root` | bool | false | Run as root (for apt, system installs) |
+| `root` | bool | false | Run as root (apt, system installs) |
 | `timeout` | int | 30 | Max seconds |
 | `depends_on` | array | [] | Required prior steps |
 | `continue_on_error` | bool | false | Don't fail pipeline on error |
 | `always_run` | bool | false | Run even if prior steps failed |
+
+---
+
+## Documentation
+
+Full documentation in [`Documentations/markdowns/`](Documentations/markdowns/):
+
+| Document | Description |
+|----------|-------------|
+| [Getting Started](Documentations/markdowns/getting-started.md) | Installation, setup, first run |
+| [Command Runner](Documentations/markdowns/command-runner.md) | `/run` endpoint, options, examples |
+| [Pipelines](Documentations/markdowns/pipelines.md) | DAG workflows, dependencies, multi-language |
+| [API Reference](Documentations/markdowns/api-reference.md) | All 28 endpoints, request/response formats |
+| [CLI Guide](Documentations/markdowns/cli-guide.md) | parad installation, commands, YAML format |
 
 ---
 
@@ -293,34 +271,45 @@ steps:
 | `PACKAGE_INSTALL_RATE` | `5` | Installs/min |
 | `MEMORY_LIMIT_MB` | `440` | Memory limit |
 | `CPU_LIMIT_PCT` | `80` | CPU limit |
-| `ENABLE_BWRAP` | `false` | Bubblewrap isolation |
 
 ---
 
 ## Architecture
 
 ```
-┌─────────────────────────────────────────────────┐
-│              Nexuss Bash (Docker)                │
-│                                                  │
-│  Auth → Rate Limit → Audit → Router             │
-│                            │                     │
-│  ┌──────────┬──────────┬───┴───┬──────────┐     │
-│  │ Sessions │ Jobs     │ Files │ Pipelines │     │
-│  │ (PTY)    │ (exec)   │(upload)│  (YAML)  │     │
-│  └────┬─────┴────┬─────┴───────┴────┬──────┘     │
-│       │          │                   │            │
-│  ┌────▼──────────▼───────────────────▼──────┐    │
-│  │      SequentialExecutor (Task Manager)   │    │
-│  │      spawn → wait exit → next command    │    │
-│  ├──────────────────────────────────────────┤    │
-│  │         ProcessLauncher (uid 1000)       │    │
-│  │         cgroups v2 + ulimit              │    │
-│  └──────────────────────────────────────────┘    │
-│                                                  │
-│  ResourceManager ← /proc polling (5s)           │
-│  PackageManager  ← manifest + cleanup cron       │
-└─────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────┐
+│                    Nexuss Bash                            │
+│                                                          │
+│  ┌─────────────┐  ┌──────────────┐  ┌──────────────┐   │
+│  │  CLI (parad) │  │ Web Dashboard│  │   REST API   │   │
+│  │  pip install │  │  Next.js +   │  │  28 endpoints│   │
+│  │              │  │  TypeScript  │  │              │   │
+│  └──────┬───────┘  └──────┬───────┘  └──────┬───────┘   │
+│         │                 │                  │            │
+│         └─────────────────┼──────────────────┘            │
+│                           │                               │
+│  ┌────────────────────────▼───────────────────────────┐  │
+│  │              Docker Container                       │  │
+│  │                                                     │  │
+│  │  Auth → Rate Limit → Audit → Router                │  │
+│  │                            │                        │  │
+│  │  ┌──────────┬──────────┬───┴───┬──────────┐        │  │
+│  │  │ Sessions │ Jobs     │ Files │ Pipelines │        │  │
+│  │  │ (PTY)    │ (exec)   │(upload)│  (YAML)  │        │  │
+│  │  └────┬─────┴────┬─────┴───────┴────┬──────┘        │  │
+│  │       │          │                   │               │  │
+│  │  ┌────▼──────────▼───────────────────▼──────┐       │  │
+│  │  │      SequentialExecutor (Task Manager)   │       │  │
+│  │  │      spawn → wait exit → next command    │       │  │
+│  │  ├──────────────────────────────────────────┤       │  │
+│  │  │         ProcessLauncher (uid 1000)       │       │  │
+│  │  │         cgroups v2 + ulimit              │       │  │
+│  │  └──────────────────────────────────────────┘       │  │
+│  │                                                     │  │
+│  │  ResourceManager ← /proc polling (5s)              │  │
+│  │  PackageManager  ← manifest + cleanup cron          │  │
+│  └─────────────────────────────────────────────────────┘  │
+└──────────────────────────────────────────────────────────┘
 ```
 
 ### Core Components
@@ -341,46 +330,77 @@ steps:
 
 ```
 nexuss-bash/
-├ Dockerfile
-├ server.js
-├ package.json
-├ src/
-│  ├── config.js
-│  ├── utils/
-│  │  ├── logger.js
-│  │  └── id.js
-│  ├── middleware/
-│  │  ├── auth.js
-│  │  ├── rateLimiter.js
-│  │  ├── errorHandler.js
-│  │  └── auditLog.js
-│  ├── routes/
-│  │  ├── health.js
-│  │  ├── system.js
-│  │  ├── run.js              # POST /run — command runner
-│  │  ├── sessions.js
-│  │  ├── jobs.js
-│  │  ├── files.js
-│  │  ├── pipelines.js
-│  │  ├── packages.js
-│  │  └── resources.js
-│  ├── core/
-│  │  ├── sequentialExecutor.js  # Task manager
-│  │  ├── pipelineExecutor.js
-│  │  ├── sessionManager.js
-│  │  ├── jobExecutor.js
-│  │  ├── resourceManager.js
-│  │  └── packageManager.js
-│  └── sandbox/
-│     ├── isolation.js
-│     └── processLauncher.js
-├ tests/
-│  └── e2e.sh
-├ examples/
-│  ├── hello-world.yaml
-│  └── clone-and-run.yaml
-└ .github/workflows/
-   └── e2e.yml
+├── Dockerfile
+├── server.js
+├── package.json
+├── src/
+│   ├── config.js
+│   ├── utils/
+│   │   ├── logger.js
+│   │   └── id.js
+│   ├── middleware/
+│   │   ├── auth.js
+│   │   ├── rateLimiter.js
+│   │   ├── errorHandler.js
+│   │   └── auditLog.js
+│   ├── routes/
+│   │   ├── health.js
+│   │   ├── system.js
+│   │   ├── run.js
+│   │   ├── sessions.js
+│   │   ├── jobs.js
+│   │   ├── files.js
+│   │   ├── pipelines.js
+│   │   ├── packages.js
+│   │   └── resources.js
+│   ├── core/
+│   │   ├── sequentialExecutor.js
+│   │   ├── pipelineExecutor.js
+│   │   ├── sessionManager.js
+│   │   ├── jobExecutor.js
+│   │   ├── resourceManager.js
+│   │   └── packageManager.js
+│   └── sandbox/
+│       ├── isolation.js
+│       └── processLauncher.js
+├── cli/
+│   ├── setup.py
+│   ├── pyproject.toml
+│   └── parad/
+│       ├── cli.py
+│       ├── api.py
+│       ├── config.py
+│       ├── runner.py
+│       ├── display.py
+│       └── yaml_parser.py
+├── frontend/
+│   ├── package.json
+│   ├── tailwind.config.ts
+│   └── src/
+│       ├── app/
+│       │   ├── page.tsx
+│       │   ├── dashboard/page.tsx
+│       │   ├── settings/page.tsx
+│       │   └── docs/page.tsx
+│       ├── components/
+│       │   ├── Navbar.tsx
+│       │   ├── AuthGuard.tsx
+│       │   └── Terminal.tsx
+│       └── lib/
+│           ├── api.ts
+│           └── auth-context.tsx
+├── Documentations/
+│   └── markdowns/
+│       ├── getting-started.md
+│       ├── command-runner.md
+│       ├── pipelines.md
+│       ├── api-reference.md
+│       └── cli-guide.md
+├── tests/
+│   └── e2e.sh
+└── examples/
+    ├── hello-world.yaml
+    └── clone-and-run.yaml
 ```
 
 ---
@@ -388,8 +408,8 @@ nexuss-bash/
 ## Testing
 
 ```bash
-# Run E2E tests against live server
-API_URL=http://localhost:3000 API_KEY=your-key bash tests/e2e.sh
+# E2E tests against live server
+API_URL=https://nexuss-bash.onrender.com API_KEY=your-key bash tests/e2e.sh
 ```
 
 ---
