@@ -8,7 +8,7 @@
 [![Docker](https://img.shields.io/badge/docker-24.04-blue?logo=docker)](Dockerfile)
 [![Node](https://img.shields.io/badge/node-20 LTS-green?logo=node.js)](package.json)
 
-*Interactive shell sessions, one-shot code execution, file uploads, YAML pipelines, and runtime package management — all through a clean REST API.*
+*One-liner command execution, YAML pipelines, file uploads, and runtime package management — all through a clean REST API.*
 
 [Getting Started](#-quick-start) · [API Reference](#-api-reference) · [Architecture](#-architecture)
 
@@ -20,10 +20,11 @@
 
 Nexuss Bash is a **lightweight, secure remote execution platform** that runs inside a single Docker container:
 
+- **Command Runner** — Send a list of commands, get results back. Manager handles everything.
+- **YAML Pipelines** — Define multi-step workflows with dependencies and parallel steps
 - **PTY Sessions** — Interactive bash shells with command history and logs
 - **Multi-Language Jobs** — Execute Python, Node.js, Bash, or PHP scripts
 - **File Upload** — Upload files and execute them remotely
-- **YAML Pipelines** — Define multi-step workflows in YAML, execute end-to-end
 - **Package Management** — Install apt/pip/npm/composer packages at runtime
 - **Resource Monitoring** — Real-time RAM/disk/CPU tracking with auto-throttling
 - **Secure Isolation** — Unprivileged user, cgroup limits, constant-time auth
@@ -37,16 +38,11 @@ Nexuss Bash is a **lightweight, secure remote execution platform** that runs ins
 docker build -t nexuss-bash .
 docker run -d -p 3000:3000 -e API_KEY="your-key" nexuss-bash
 
-# One-liner: upload YAML → execute → get results
-curl -X POST http://localhost:3000/pipelines/run \
-  -H "Authorization: Bearer your-key" \
-  -F "file=@pipeline.yaml"
-
-# Or inline YAML
-curl -X POST http://localhost:3000/pipelines/run \
+# Send commands, get results — one call
+curl -X POST http://localhost:3000/run \
   -H "Authorization: Bearer your-key" \
   -H "Content-Type: application/json" \
-  -d '{"yaml": "name: test\nsteps:\n  - id: s1\n    command: echo hello"}'
+  -d '{"commands":["echo Hello","whoami","ls /workspace"]}'
 ```
 
 ---
@@ -61,12 +57,15 @@ curl -X POST http://localhost:3000/pipelines/run \
 - Success: `{ "data": { ... } }` or `{ "data": [...], "total": N }`
 - Error: `{ "error": { "code": "...", "message": "...", "details": {} } }`
 
-### Endpoints (25)
+### Endpoints (28)
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
 | `GET` | `/health` | Health check (no auth) |
 | `GET` | `/system` | Full system state |
+| **`POST`** | **`/run`** | **Send commands → execute → get results** |
+| `GET` | `/run` | List past runs |
+| `GET` | `/run/:id` | Get run details |
 | `POST` | `/sessions` | Create shell session |
 | `GET` | `/sessions` | List sessions |
 | `GET` | `/sessions/:id` | Get session details |
@@ -81,8 +80,8 @@ curl -X POST http://localhost:3000/pipelines/run \
 | `GET` | `/files/:id` | Get file metadata |
 | `GET` | `/files/:id/download` | Download file |
 | `DELETE` | `/files/:id` | Delete file |
-| `POST` | **`/pipelines/run`** | **Upload YAML → execute → get results (one call)** |
-| `POST` | `/pipelines` | Submit pipeline (async, poll with GET) |
+| `POST` | `/pipelines/run` | Upload YAML pipeline → execute → results |
+| `POST` | `/pipelines` | Submit pipeline (async) |
 | `GET` | `/pipelines` | List pipelines |
 | `GET` | `/pipelines/:id` | Get pipeline status |
 | `DELETE` | `/pipelines/:id` | Cancel pipeline |
@@ -91,42 +90,174 @@ curl -X POST http://localhost:3000/pipelines/run \
 | `DELETE` | `/packages/:name` | Remove package |
 | `GET` | `/resources` | Resource usage |
 
-### Pipelines
+---
 
-**One-liner — upload YAML file, execute, get results:**
+## Command Runner (`POST /run`)
 
-```bash
-curl -X POST http://localhost:3000/pipelines/run \
-  -H "Authorization: Bearer your-key" \
-  -F "file=@pipeline.yaml"
+The primary interface. Send a list of commands, the manager runs them one by one, monitors each for completion, and returns all results.
+
+### How It Works
+
+```
+Your commands → Manager spawns process → waits for exit → records result → next command
+                                                              ↑
+                                                     timeout is safety net only
 ```
 
-**Or inline YAML:**
+Each command runs to completion. The manager doesn't guess time — it **listens** for the process to finish.
+
+### JSON — inline commands
 
 ```bash
-curl -X POST http://localhost:3000/pipelines/run \
+curl -X POST http://localhost:3000/run \
   -H "Authorization: Bearer your-key" \
   -H "Content-Type: application/json" \
-  -d '{"yaml": "name: test\nsteps:\n  - id: s1\n    command: echo hello"}'
+  -d '{"commands":["echo Hello","whoami","python3 -c \"print(2+2)\""]}'
 ```
 
-**Example pipeline YAML:**
+### YAML file upload
+
+```bash
+curl -X POST http://localhost:3000/run \
+  -H "Authorization: Bearer your-key" \
+  -F "file=@commands.yaml"
+```
+
+### YAML format
 
 ```yaml
-name: "Install and Run"
-steps:
-  - id: install_deps
-    root: true
+commands:
+  - "apt-get update -qq && apt-get install -y git"
+  - "git clone https://github.com/user/repo.git /workspace/repo"
+  - "node /workspace/repo/index.js"
+```
+
+### Command options
+
+Each command can be a string or an object with options:
+
+```yaml
+commands:
+  # Simple string — runs as-is
+  - "echo Hello"
+
+  # Object — full control
+  - name: install_deps
     command: "apt-get update -qq && apt-get install -y git"
     timeout: 120
+    stop_on_fail: true
 
-  - id: clone
+  - name: clone
     command: "git clone https://github.com/user/repo.git /workspace/repo"
-    depends_on: install_deps
 
-  - id: run
+  - name: run
     command: "node /workspace/repo/index.js"
-    depends_on: clone
+```
+
+### Command options table
+
+| Field | Type | Default | Description |
+|-------|------|---------|-------------|
+| `name` | string | `step_N` | Label for this command (shown in results) |
+| `command` | string | (required) | Shell command to execute |
+| `timeout` | int (sec) | 300 | Safety net — kill if hung (commands normally exit on their own) |
+| `stop_on_fail` | bool | `false` | If `true`, halt the chain when this command fails. Remaining commands are skipped. |
+
+### Stop on fail
+
+By default, the manager continues to the next command even if one fails. Set `stop_on_fail: true` to halt the chain:
+
+```yaml
+commands:
+  - name: build
+    command: "make build"
+    stop_on_fail: true
+
+  - name: test
+    command: "make test"
+    stop_on_fail: true
+
+  - name: deploy
+    command: "make deploy"
+```
+
+If `build` fails → `test` and `deploy` are skipped. If `build` passes but `test` fails → `deploy` is skipped.
+
+### Response format
+
+```json
+{
+  "data": {
+    "id": "run_1784973527967_7u7raa",
+    "status": "completed",
+    "submitted_at": "2026-07-25T04:08:15.793Z",
+    "started_at": "2026-07-25T04:08:15.793Z",
+    "finished_at": "2026-07-25T04:08:16.408Z",
+    "total_duration_ms": 615,
+    "progress": "3/3",
+    "results": [
+      {
+        "id": 1,
+        "name": "step_1",
+        "command": "echo Hello",
+        "status": "completed",
+        "exit_code": 0,
+        "duration_ms": 51,
+        "stdout": "Hello\n",
+        "stderr": "",
+        "timed_out": false
+      },
+      {
+        "id": 2,
+        "name": "step_2",
+        "command": "exit 1",
+        "status": "failed",
+        "exit_code": 1,
+        "duration_ms": 7,
+        "stdout": "",
+        "stderr": "",
+        "timed_out": false
+      },
+      {
+        "id": 3,
+        "name": "step_3",
+        "command": "echo done",
+        "status": "skipped",
+        "exit_code": null,
+        "duration_ms": 0,
+        "stdout": "",
+        "stderr": "Skipped: previous step failed (stop_on_fail)",
+        "timed_out": false
+      }
+    ]
+  }
+}
+```
+
+---
+
+## Pipelines (`POST /pipelines/run`)
+
+For complex workflows with dependencies, parallel steps, and multi-language support:
+
+```yaml
+name: "Deploy Pipeline"
+steps:
+  - id: build
+    language: python3
+    code: |
+      import subprocess
+      subprocess.run(["pip", "install", "--break-system-packages", "pandas"])
+
+  - id: test
+    language: python3
+    code: "import pandas; print(pandas.__version__)"
+    depends_on: build
+
+  - id: notify
+    language: bash
+    command: "echo 'Pipeline complete'"
+    always_run: true
 ```
 
 **Step options:**
@@ -137,7 +268,7 @@ steps:
 | `command` | string | null | Shell command |
 | `code` | string | null | Code for language runtime |
 | `language` | string | `bash` | `bash`, `python3`, `node`, `php` |
-| `root` | bool | false | Run as root (apt, system installs) |
+| `root` | bool | false | Run as root (for apt, system installs) |
 | `timeout` | int | 30 | Max seconds |
 | `depends_on` | array | [] | Required prior steps |
 | `continue_on_error` | bool | false | Don't fail pipeline on error |
@@ -176,10 +307,13 @@ steps:
 │                            │                     │
 │  ┌──────────┬──────────┬───┴───┬──────────┐     │
 │  │ Sessions │ Jobs     │ Files │ Pipelines │     │
-│  │ (PTY)    │ (exec)   │ (upload)│ (YAML)  │     │
+│  │ (PTY)    │ (exec)   │(upload)│  (YAML)  │     │
 │  └────┬─────┴────┬─────┴───────┴────┬──────┘     │
 │       │          │                   │            │
 │  ┌────▼──────────▼───────────────────▼──────┐    │
+│  │      SequentialExecutor (Task Manager)   │    │
+│  │      spawn → wait exit → next command    │    │
+│  ├──────────────────────────────────────────┤    │
 │  │         ProcessLauncher (uid 1000)       │    │
 │  │         cgroups v2 + ulimit              │    │
 │  └──────────────────────────────────────────┘    │
@@ -193,9 +327,10 @@ steps:
 
 | Component | Purpose |
 |-----------|---------|
+| **SequentialExecutor** | Command chain manager — monitors process exit, controls flow |
+| **PipelineExecutor** | DAG-based pipeline orchestration with dependencies |
 | **SessionManager** | PTY shell lifecycle, idle sweep |
 | **JobExecutor** | Multi-language code execution |
-| **PipelineExecutor** | YAML pipeline orchestration |
 | **ResourceManager** | RAM/disk/CPU monitoring |
 | **PackageManager** | Runtime package installs |
 | **ProcessLauncher** | Isolated process spawning |
@@ -206,42 +341,46 @@ steps:
 
 ```
 nexuss-bash/
-├── Dockerfile
-├── server.js
-├── package.json
-├── src/
-│   ├── config.js
-│   ├── utils/
-│   │   ├── logger.js
-│   │   └── id.js
-│   ├── middleware/
-│   │   ├── auth.js
-│   │   ├── rateLimiter.js
-│   │   ├── errorHandler.js
-│   │   └── auditLog.js
-│   ├── routes/
-│   │   ├── health.js
-│   │   ├── system.js
-│   │   ├── sessions.js
-│   │   ├── jobs.js
-│   │   ├── files.js
-│   │   ├── pipelines.js
-│   │   ├── packages.js
-│   │   └── resources.js
-│   ├── core/
-│   │   ├── sessionManager.js
-│   │   ├── jobExecutor.js
-│   │   ├── pipelineExecutor.js
-│   │   ├── resourceManager.js
-│   │   └── packageManager.js
-│   └── sandbox/
-│       ├── isolation.js
-│       └── processLauncher.js
-├── tests/
-│   └── e2e.sh              # 82 E2E tests
-├── .github/workflows/
-│   └── e2e.yml             # CI pipeline
-└── SPEC/                   # Design docs
+├ Dockerfile
+├ server.js
+├ package.json
+├ src/
+│  ├── config.js
+│  ├── utils/
+│  │  ├── logger.js
+│  │  └── id.js
+│  ├── middleware/
+│  │  ├── auth.js
+│  │  ├── rateLimiter.js
+│  │  ├── errorHandler.js
+│  │  └── auditLog.js
+│  ├── routes/
+│  │  ├── health.js
+│  │  ├── system.js
+│  │  ├── run.js              # POST /run — command runner
+│  │  ├── sessions.js
+│  │  ├── jobs.js
+│  │  ├── files.js
+│  │  ├── pipelines.js
+│  │  ├── packages.js
+│  │  └── resources.js
+│  ├── core/
+│  │  ├── sequentialExecutor.js  # Task manager
+│  │  ├── pipelineExecutor.js
+│  │  ├── sessionManager.js
+│  │  ├── jobExecutor.js
+│  │  ├── resourceManager.js
+│  │  └── packageManager.js
+│  └── sandbox/
+│     ├── isolation.js
+│     └── processLauncher.js
+├ tests/
+│  └── e2e.sh
+├ examples/
+│  ├── hello-world.yaml
+│  └── clone-and-run.yaml
+└ .github/workflows/
+   └── e2e.yml
 ```
 
 ---
@@ -252,8 +391,6 @@ nexuss-bash/
 # Run E2E tests against live server
 API_URL=http://localhost:3000 API_KEY=your-key bash tests/e2e.sh
 ```
-
-82 tests covering: health, sessions, jobs, files, pipelines, packages, resources, error formats, pagination.
 
 ---
 
