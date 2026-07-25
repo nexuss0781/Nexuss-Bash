@@ -1,6 +1,8 @@
 'use strict';
 
 const express = require('express');
+const path = require('path');
+const fs = require('fs');
 const config = require('./src/config');
 const { log, audit } = require('./src/utils/logger');
 const authMiddleware = require('./src/middleware/auth');
@@ -26,6 +28,30 @@ const systemRoutes = require('./src/routes/system');
 
 const app = express();
 const PORT = config.PORT;
+
+const FRONTEND_DIR = path.join(__dirname, 'frontend', 'out');
+const frontendExists = fs.existsSync(FRONTEND_DIR);
+
+// Redirect root to /app
+if (frontendExists) {
+  app.get('/', (req, res) => {
+    res.redirect(302, '/app');
+  });
+
+  app.use('/app', express.static(FRONTEND_DIR, { index: 'index.html' }));
+
+  app.get('/app/*', (req, res) => {
+    const filePath = path.join(FRONTEND_DIR, req.params[0]);
+    if (fs.existsSync(filePath) && fs.statSync(filePath).isFile()) {
+      return res.sendFile(filePath);
+    }
+    const indexPath = path.join(FRONTEND_DIR, req.params[0], 'index.html');
+    if (fs.existsSync(indexPath)) {
+      return res.sendFile(indexPath);
+    }
+    res.sendFile(path.join(FRONTEND_DIR, 'index.html'));
+  });
+}
 
 // Body parser
 app.use(express.json({ limit: '1mb' }));
