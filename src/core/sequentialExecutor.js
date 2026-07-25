@@ -1,8 +1,7 @@
 'use strict';
 
 const yaml = require('js-yaml');
-const { execSync, spawn } = require('child_process');
-const { generateId } = require('../utils/id');
+const { spawn } = require('child_process');
 const { log, audit } = require('../utils/logger');
 
 const runs = new Map();
