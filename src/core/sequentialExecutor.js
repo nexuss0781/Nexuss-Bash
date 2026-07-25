@@ -26,7 +26,7 @@ function normalizeCommands(doc) {
   }
   return raw.map((item, i) => {
     if (typeof item === 'string') {
-      return { id: i + 1, name: `step_${i + 1}`, command: item, timeout_ms: 300000 };
+      return { id: i + 1, name: `step_${i + 1}`, command: item, timeout_ms: 300000, stop_on_fail: false };
     }
     if (item && typeof item === 'object' && item.command) {
       return {
@@ -34,6 +34,7 @@ function normalizeCommands(doc) {
         name: item.name || `step_${i + 1}`,
         command: item.command,
         timeout_ms: item.timeout ? item.timeout * 1000 : 300000,
+        stop_on_fail: !!item.stop_on_fail,
       };
     }
     throw new Error(`Command ${i + 1}: must be a string or {command: "..."} object`);
@@ -148,6 +149,24 @@ async function run(content, timeoutMs) {
 
     if (result.status === 'failed') {
       log('info', 'sequentialExecutor', `Run ${runId}: step "${cmd.name}" failed (exit ${result.exit_code})`);
+      if (cmd.stop_on_fail) {
+        log('info', 'sequentialExecutor', `Run ${runId}: stop_on_fail triggered, halting chain`);
+        for (let j = i + 1; j < commands.length; j++) {
+          runRecord.results.push({
+            id: commands[j].id,
+            name: commands[j].name,
+            command: commands[j].command,
+            status: 'skipped',
+            exit_code: null,
+            duration_ms: 0,
+            stdout: '',
+            stderr: 'Skipped: previous step failed (stop_on_fail)',
+            timed_out: false,
+          });
+        }
+        runRecord.progress = `${commands.length}/${commands.length}`;
+        break;
+      }
     } else {
       log('info', 'sequentialExecutor', `Run ${runId}: step "${cmd.name}" done (${result.duration_ms}ms)`);
     }
