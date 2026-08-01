@@ -60,8 +60,12 @@ router.post('/', upload.single('file'), async (req, res) => {
 
 // GET / — list past runs
 router.get('/', (req, res) => {
-  const data = sequentialExecutor.list();
-  res.json({ data, total: data.length });
+  const limit = Math.min(parseInt(req.query.limit, 10) || 20, 100);
+  const offset = parseInt(req.query.offset, 10) || 0;
+  const allRuns = sequentialExecutor.list();
+  const total = allRuns.length;
+  const data = allRuns.slice(offset, offset + limit);
+  res.json({ data, total });
 });
 
 // GET /:id — get run details

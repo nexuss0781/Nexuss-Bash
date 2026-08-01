@@ -10,7 +10,7 @@ const config = require('../config');
 const { generateFileId } = require('../utils/id');
 const { log, audit } = require('../utils/logger');
 
-const UPLOAD_DIR = '/workspace/uploads';
+const UPLOAD_DIR = path.join(config.WORKSPACE_BASE, 'uploads');
 const METADATA_PATH = path.join(UPLOAD_DIR, 'metadata.json');
 
 const storage = multer.memoryStorage();

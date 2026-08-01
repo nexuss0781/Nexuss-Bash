@@ -8,3 +8,5 @@ node_modules/
 cli/build/
 cli/dist/
 cli/nexinal.egg-info/
+frontend/dist/
+ts-client/dist/

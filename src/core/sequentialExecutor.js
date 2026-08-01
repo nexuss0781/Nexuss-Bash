@@ -3,6 +3,7 @@
 const yaml = require('js-yaml');
 const { spawn } = require('child_process');
 const { log, audit } = require('../utils/logger');
+const eventBus = require('./eventBus');
 
 const runs = new Map();
 
@@ -116,6 +117,7 @@ async function run(content, timeoutMs) {
 
   log('info', 'sequentialExecutor', `Run started: ${runId} (${commands.length} commands)`);
   audit('run_start', runId, { count: commands.length });
+  eventBus.emit('run_started', 'run', runId, { count: commands.length });
 
   for (let i = 0; i < commands.length; i++) {
     const cmd = commands[i];
@@ -146,6 +148,13 @@ async function run(content, timeoutMs) {
     const result = await runCommand(cmd, maxTimeout - (Date.now() - startTime));
     runRecord.results.push(result);
     runRecord.progress = `${i + 1}/${commands.length}`;
+    eventBus.emit('run_step', 'run', runId, {
+      step: result.id,
+      name: result.name,
+      status: result.status,
+      exit_code: result.exit_code,
+      progress: runRecord.progress,
+    });
 
     if (result.status === 'failed') {
       log('info', 'sequentialExecutor', `Run ${runId}: step "${cmd.name}" failed (exit ${result.exit_code})`);
@@ -183,6 +192,13 @@ async function run(content, timeoutMs) {
     steps: commands.length,
   });
   log('info', 'sequentialExecutor', `Run ${runId}: ${runRecord.status} (${runRecord.total_duration_ms}ms)`);
+  eventBus.emit('run_completed', 'run', runId, {
+    status: runRecord.status,
+    total_duration_ms: runRecord.total_duration_ms,
+    steps: commands.length,
+    failed_steps: runRecord.results.filter((r) => r.status === 'failed').length,
+    progress: runRecord.progress,
+  });
 
   return {
     id: runRecord.id,

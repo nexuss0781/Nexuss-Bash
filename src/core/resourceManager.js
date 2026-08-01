@@ -57,7 +57,7 @@ function readMemoryUsage() {
 function readDiskUsage() {
   try {
     const { execSync } = require('child_process');
-    const output = execSync('df /workspace --output=pcent 2>/dev/null || echo "0%"', {
+    const output = execSync(`df ${config.WORKSPACE_BASE} --output=pcent 2>/dev/null || echo "0%"`, {
       encoding: 'utf8',
       timeout: 5000,
     });

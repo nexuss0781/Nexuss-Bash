@@ -6,6 +6,7 @@ const fs = require('fs');
 const config = require('./src/config');
 const { log, audit } = require('./src/utils/logger');
 const authMiddleware = require('./src/middleware/auth');
+const corsMiddleware = require('./src/middleware/cors');
 const rateLimiter = require('./src/middleware/rateLimiter');
 const auditLogMiddleware = require('./src/middleware/auditLog');
 const { errorHandler, notFoundHandler } = require('./src/middleware/errorHandler');
@@ -25,6 +26,7 @@ const fileRoutes = require('./src/routes/files');
 const pipelineRoutes = require('./src/routes/pipelines');
 const runRoutes = require('./src/routes/run');
 const systemRoutes = require('./src/routes/system');
+const eventRoutes = require('./src/routes/events');
 
 const app = express();
 const PORT = config.PORT;
@@ -71,6 +73,7 @@ if (frontendExists) {
 app.use(express.json({ limit: '1mb' }));
 
 // Middleware
+app.use(corsMiddleware);
 app.use(authMiddleware);
 app.use(rateLimiter);
 app.use(auditLogMiddleware);
@@ -94,6 +97,7 @@ app.use('/resources', resourceRoutes);
 app.use('/pipelines', pipelineRoutes);
 app.use('/run', runRoutes);
 app.use('/system', systemRoutes);
+app.use('/events', eventRoutes);
 
 // Error handling
 app.use(notFoundHandler);

@@ -11,6 +11,7 @@ for (const key of required) {
 const config = Object.freeze({
   API_KEY: process.env.API_KEY,
   PORT: parseInt(process.env.PORT || '3000', 10),
+  WORKSPACE_BASE: process.env.WORKSPACE_BASE || '/workspace',
   IDLE_SESSION_TIMEOUT_MIN: parseInt(process.env.IDLE_SESSION_TIMEOUT_MIN || '30', 10),
   EXEC_TIMEOUT_SEC: parseInt(process.env.EXEC_TIMEOUT_SEC || '30', 10),
   JOB_TIMEOUT_SEC: parseInt(process.env.JOB_TIMEOUT_SEC || '300', 10),
@@ -27,6 +28,7 @@ const config = Object.freeze({
   MAX_UPLOAD_MB: parseInt(process.env.MAX_UPLOAD_MB || '10', 10),
   MAX_PIPELINE_STEPS: parseInt(process.env.MAX_PIPELINE_STEPS || '20', 10),
   ENABLE_BWRAP: process.env.ENABLE_BWRAP === 'true',
+  CORS_ORIGINS: process.env.CORS_ORIGINS || '*',
 });
 
 module.exports = config;
