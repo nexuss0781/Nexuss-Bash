@@ -12,7 +12,7 @@ const pipelineExecutor = require('../core/pipelineExecutor');
 const packageManager = require('../core/packageManager');
 const config = require('../config');
 
-const UPLOAD_DIR = '/workspace/uploads';
+const UPLOAD_DIR = path.join(config.WORKSPACE_BASE, 'uploads');
 const METADATA_PATH = path.join(UPLOAD_DIR, 'metadata.json');
 
 function getFileStats() {

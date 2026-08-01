@@ -6,13 +6,14 @@ const yaml = require('js-yaml');
 const { execSync } = require('child_process');
 const { generatePipelineId } = require('../utils/id');
 const { log, audit } = require('../utils/logger');
+const eventBus = require('./eventBus');
 const jobExecutor = require('./jobExecutor');
 const config = require('../config');
 
 const pipelines = new Map();
 
 const SUPPORTED_LANGUAGES = ['python3', 'node', 'bash', 'php'];
-const UPLOAD_DIR = '/workspace/uploads';
+const UPLOAD_DIR = path.join(config.WORKSPACE_BASE, 'uploads');
 
 function parseYaml(yamlContent) {
   try {
@@ -198,6 +199,11 @@ async function execute(pipelineId) {
   pipeline.status = 'running';
   pipeline.started_at = new Date().toISOString();
 
+  eventBus.emit('pipeline_started', 'pipeline', pipelineId, {
+    name: pipeline.name,
+    step_count: pipeline.steps.length,
+  });
+
   const stepResults = {};
   for (const step of pipeline.steps) {
     stepResults[step.id] = 'pending';
@@ -236,6 +242,12 @@ async function execute(pipelineId) {
 
       await executeStep(step);
       stepResults[step.id] = step.status;
+      eventBus.emit('pipeline_step', 'pipeline', pipelineId, {
+        step: step.id,
+        status: step.status,
+        exit_code: step.exit_code,
+        progress: pipeline.progress,
+      });
 
       if (step.status === 'failed' && !step.continue_on_error) {
         failedAny = true;
@@ -254,6 +266,11 @@ async function execute(pipelineId) {
 
   audit('pipeline_complete', pipelineId, { status: pipeline.status });
   log('info', 'pipelineExecutor', `Pipeline ${pipelineId} finished: ${pipeline.status}`);
+  eventBus.emit('pipeline_completed', 'pipeline', pipelineId, {
+    status: pipeline.status,
+    failed_steps: pipeline.steps.filter((s) => s.status === 'failed').length,
+    skipped_steps: pipeline.steps.filter((s) => s.status === 'skipped').length,
+  });
 }
 
 function submit(yamlContent, fileId) {
@@ -290,6 +307,7 @@ function submit(yamlContent, fileId) {
 
   audit('pipeline_submit', id, { name: pipeline.name, step_count: pipeline.steps.length });
   log('info', 'pipelineExecutor', `Pipeline submitted: ${id}`, { name: pipeline.name });
+  eventBus.emit('pipeline_submitted', 'pipeline', id, { name: pipeline.name, step_count: pipeline.steps.length });
 
   // Start execution asynchronously
   execute(id);
@@ -386,6 +404,7 @@ function cancel(pipelineId) {
 
   audit('pipeline_cancel', pipelineId);
   log('info', 'pipelineExecutor', `Pipeline cancelled: ${pipelineId}`);
+  eventBus.emit('pipeline_cancelled', 'pipeline', pipelineId, { status: pipeline.status });
 
   return { id: pipeline.id, status: pipeline.status };
 }

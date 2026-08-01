@@ -6,11 +6,12 @@ const os = require('os');
 const { spawnProcess } = require('../sandbox/processLauncher');
 const { generateJobId } = require('../utils/id');
 const { log, audit } = require('../utils/logger');
+const eventBus = require('./eventBus');
 const config = require('../config');
 
 const jobs = new Map();
 const JOB_TIMEOUT_MS = config.JOB_TIMEOUT_SEC * 1000;
-const JOBS_DIR = '/workspace/jobs';
+const JOBS_DIR = path.join(config.WORKSPACE_BASE, 'jobs');
 
 const LANGUAGE_COMMANDS = {
   python3: (scriptPath) => ({ command: 'python3', args: [scriptPath] }),
@@ -70,6 +71,7 @@ function submit({ language, code, timeout_sec, limits = {} }) {
 
   audit('job_submit', id, { language, code_length: code.length });
   log('info', 'jobExecutor', `Job submitted: ${id}`, { language });
+  eventBus.emit('job_submitted', 'job', id, { language });
 
   // Start execution async
   executeJob(id);
@@ -89,6 +91,7 @@ async function executeJob(id) {
   job.started_at = new Date().toISOString();
 
   log('info', 'jobExecutor', `Job running: ${id}`);
+  eventBus.emit('job_running', 'job', id, { language: job.language });
 
   try {
     const langConfig = LANGUAGE_COMMANDS[job.language];
@@ -114,12 +117,18 @@ async function executeJob(id) {
     job.duration_ms = result.duration_ms;
     job.status = result.exit_code === 0 ? 'completed' : 'failed';
     job.finished_at = new Date().toISOString();
+    eventBus.emit(job.status === 'completed' ? 'job_completed' : 'job_failed', 'job', id, {
+      status: job.status,
+      exit_code: job.exit_code,
+      duration_ms: job.duration_ms,
+    });
   } catch (err) {
     job.status = 'failed';
     job.stderr = err.message;
     job.finished_at = new Date().toISOString();
     job.duration_ms = Date.now() - new Date(job.started_at).getTime();
     log('error', 'jobExecutor', `Job ${id} failed: ${err.message}`);
+    eventBus.emit('job_failed', 'job', id, { status: 'failed', exit_code: null, duration_ms: job.duration_ms });
   }
 
   // Cleanup scratch dir
