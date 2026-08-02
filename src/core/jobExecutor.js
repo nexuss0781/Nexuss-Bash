@@ -7,6 +7,7 @@ const { spawnProcess } = require('../sandbox/processLauncher');
 const { generateJobId } = require('../utils/id');
 const { log, audit } = require('../utils/logger');
 const eventBus = require('./eventBus');
+const persistence = require('../persistence');
 const config = require('../config');
 
 const jobs = new Map();
@@ -68,6 +69,7 @@ function submit({ language, code, timeout_sec, limits = {} }) {
   };
 
   jobs.set(id, job);
+  persistence.saveJob(job);
 
   audit('job_submit', id, { language, code_length: code.length });
   log('info', 'jobExecutor', `Job submitted: ${id}`, { language });
@@ -89,6 +91,7 @@ async function executeJob(id) {
 
   job.status = 'running';
   job.started_at = new Date().toISOString();
+  persistence.saveJob(job);
 
   log('info', 'jobExecutor', `Job running: ${id}`);
   eventBus.emit('job_running', 'job', id, { language: job.language });
@@ -122,6 +125,7 @@ async function executeJob(id) {
       exit_code: job.exit_code,
       duration_ms: job.duration_ms,
     });
+    persistence.saveJob(job);
   } catch (err) {
     job.status = 'failed';
     job.stderr = err.message;
@@ -129,6 +133,7 @@ async function executeJob(id) {
     job.duration_ms = Date.now() - new Date(job.started_at).getTime();
     log('error', 'jobExecutor', `Job ${id} failed: ${err.message}`);
     eventBus.emit('job_failed', 'job', id, { status: 'failed', exit_code: null, duration_ms: job.duration_ms });
+    persistence.saveJob(job);
   }
 
   // Cleanup scratch dir
@@ -184,10 +189,23 @@ function getStats() {
   };
 }
 
+function restore(jobRecords) {
+  for (const rec of jobRecords) {
+    if (!rec || !rec.id) continue;
+    const job = rec;
+    if (['queued', 'running'].includes(job.status)) {
+      job.status = 'interrupted';
+      job.finished_at = new Date().toISOString();
+    }
+    jobs.set(job.id, job);
+  }
+}
+
 module.exports = {
   submit,
   get,
   list,
   getStats,
+  restore,
   getAllJobs: () => jobs,
 };

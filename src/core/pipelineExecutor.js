@@ -8,6 +8,7 @@ const { generatePipelineId } = require('../utils/id');
 const { log, audit } = require('../utils/logger');
 const eventBus = require('./eventBus');
 const jobExecutor = require('./jobExecutor');
+const persistence = require('../persistence');
 const config = require('../config');
 
 const pipelines = new Map();
@@ -198,6 +199,7 @@ async function execute(pipelineId) {
 
   pipeline.status = 'running';
   pipeline.started_at = new Date().toISOString();
+  persistence.savePipeline(pipeline);
 
   eventBus.emit('pipeline_started', 'pipeline', pipelineId, {
     name: pipeline.name,
@@ -242,6 +244,7 @@ async function execute(pipelineId) {
 
       await executeStep(step);
       stepResults[step.id] = step.status;
+      persistence.savePipeline(pipeline);
       eventBus.emit('pipeline_step', 'pipeline', pipelineId, {
         step: step.id,
         status: step.status,
@@ -266,6 +269,7 @@ async function execute(pipelineId) {
 
   audit('pipeline_complete', pipelineId, { status: pipeline.status });
   log('info', 'pipelineExecutor', `Pipeline ${pipelineId} finished: ${pipeline.status}`);
+  persistence.savePipeline(pipeline);
   eventBus.emit('pipeline_completed', 'pipeline', pipelineId, {
     status: pipeline.status,
     failed_steps: pipeline.steps.filter((s) => s.status === 'failed').length,
@@ -307,6 +311,7 @@ function submit(yamlContent, fileId) {
 
   audit('pipeline_submit', id, { name: pipeline.name, step_count: pipeline.steps.length });
   log('info', 'pipelineExecutor', `Pipeline submitted: ${id}`, { name: pipeline.name });
+  persistence.savePipeline(pipeline);
   eventBus.emit('pipeline_submitted', 'pipeline', id, { name: pipeline.name, step_count: pipeline.steps.length });
 
   // Start execution asynchronously
@@ -404,6 +409,7 @@ function cancel(pipelineId) {
 
   audit('pipeline_cancel', pipelineId);
   log('info', 'pipelineExecutor', `Pipeline cancelled: ${pipelineId}`);
+  persistence.savePipeline(pipeline);
   eventBus.emit('pipeline_cancelled', 'pipeline', pipelineId, { status: pipeline.status });
 
   return { id: pipeline.id, status: pipeline.status };
@@ -435,4 +441,19 @@ function submitSync(yamlContent, fileId, timeoutMs) {
   });
 }
 
-module.exports = { submit, submitSync, get, list, cancel };
+function restore(pipelineRecords) {
+  for (const rec of pipelineRecords) {
+    if (!rec || !rec.id) continue;
+    const pipeline = rec;
+    if (['pending', 'running'].includes(pipeline.status)) {
+      pipeline.status = 'interrupted';
+      pipeline.finished_at = new Date().toISOString();
+      for (const step of pipeline.steps || []) {
+        if (['pending', 'running'].includes(step.status)) step.status = 'skipped';
+      }
+    }
+    pipelines.set(pipeline.id, pipeline);
+  }
+}
+
+module.exports = { submit, submitSync, get, list, cancel, restore };

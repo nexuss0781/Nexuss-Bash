@@ -1,5 +1,7 @@
 'use strict';
 
+const persistence = require('../persistence');
+
 const MAX_REPLAY = 200;
 
 const listeners = new Set();
@@ -37,6 +39,8 @@ function emit(type, resource, id, payload = {}) {
     }
   }
 
+  persistence.saveEvent(event);
+
   return event;
 }
 
@@ -56,4 +60,16 @@ function recent(afterId = 0, limit = MAX_REPLAY) {
   return slice.slice(-limit);
 }
 
-module.exports = { emit, subscribe, recent };
+/** Rebuild the in-memory replay buffer from persisted events (oldest → newest). */
+function restore(persistedEvents) {
+  replayBuffer.length = 0;
+  seq = 0;
+  for (const event of persistedEvents) {
+    if (!event || !event.id) continue;
+    replayBuffer.push(event);
+    if (replayBuffer.length > MAX_REPLAY) replayBuffer.shift();
+    if (event.id > seq) seq = event.id;
+  }
+}
+
+module.exports = { emit, subscribe, recent, restore };

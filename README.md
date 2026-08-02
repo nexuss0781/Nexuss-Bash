@@ -271,6 +271,31 @@ Full documentation in [`Documentations/markdowns/`](Documentations/markdowns/):
 | `PACKAGE_INSTALL_RATE` | `5` | Installs/min |
 | `MEMORY_LIMIT_MB` | `440` | Memory limit |
 | `CPU_LIMIT_PCT` | `80` | CPU limit |
+| `PARADOX_GATEWAY` | unset | Gateway URL → enables cloud sync (unset = local-only) |
+| `PARADOX_TOKEN` | unset | Gateway auth token |
+| `PARADOX_PASSPHRASE` | `default` | Encryption passphrase for the DB file |
+| `PARADOX_PROJECT` | `nexuss` | Paradox project name |
+| `PARADOX_DB` | `nexuss-bash` | Paradox database name |
+| `PARADOX_AUTO_SYNC` | `on` | Auto-push/pull when a gateway is configured |
+| `PARADOX_PULL_ON_STARTUP` | `off` | Pull from gateway on boot |
+| `PARADOX_FLUSH_INTERVAL_SEC` | `30` | Local-only: write DB to disk every N seconds |
+| `PARADOX_OUTPUT_CAP_KB` | `100` | DB-stored output cap (KB) per record |
+
+---
+
+## Persistence
+
+All runs, jobs, pipelines, sessions, events, and installed packages are recorded in a **synced encrypted SQLite database** (`parad` / sql.js engine). Full command output stays on disk in `<WORKSPACE_BASE>/results/{run,job,pipeline}/<id>.json`; the DB stores a capped payload (default 100 KB) plus the output path. On boot the service hydrates maps from the DB and marks any in-flight records as `interrupted` so nothing is silently lost.
+
+- **Local-only** (no `PARADOX_GATEWAY`): the encrypted DB is written to `$PARADOX_HOME/nexuss-bash.db` every `PARADOX_FLUSH_INTERVAL_SEC` seconds and on graceful shutdown, so records survive crashes and restarts.
+- **Cloud-synced** (with `PARADOX_GATEWAY`): the DB auto-syncs snapshots to the gateway (also pulling on startup if enabled), giving you durable records across containers/restarts.
+- `persistence.hydrate()` replays events and restores runs/jobs/pipelines/sessions/packages into the in-memory managers on boot.
+
+Run the persistence tests with:
+
+```bash
+node --test tests/persistence.test.js
+```
 
 ---
 
@@ -360,6 +385,7 @@ nexuss-bash/
 │   │   ├── jobExecutor.js
 │   │   ├── resourceManager.js
 │   │   └── packageManager.js
+│   ├── persistence.js
 │   └── sandbox/
 │       ├── isolation.js
 │       └── processLauncher.js
