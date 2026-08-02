@@ -10,3 +10,10 @@ cli/dist/
 cli/nexinal.egg-info/
 frontend/dist/
 ts-client/dist/
+
+# ── Added by nex-cls ──
+/PROPOSAL.md
+/README.md
+/Research.md
+/work.md
+/SPEC/

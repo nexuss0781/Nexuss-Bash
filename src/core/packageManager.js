@@ -4,6 +4,7 @@ const fs = require('fs');
 const path = require('path');
 const { generatePackageId } = require('../utils/id');
 const { log, audit } = require('../utils/logger');
+const persistence = require('../persistence');
 const config = require('../config');
 
 const MANIFEST_PATH = path.join(__dirname, '..', '..', 'data', 'packages.json');
@@ -45,6 +46,7 @@ function add(name, manager, size_kb = 0) {
 
   manifest.packages.push(entry);
   save();
+  persistence.savePackage(entry);
   return entry;
 }
 
@@ -56,6 +58,7 @@ function remove(name) {
 
   const removed = manifest.packages.splice(idx, 1)[0];
   save();
+  persistence.removePackage(removed.name);
   return removed;
 }
 
@@ -188,7 +191,14 @@ function updateLastUsed(name) {
   if (pkg) {
     pkg.last_used = new Date().toISOString();
     save();
+    persistence.savePackage(pkg);
   }
+}
+
+function restore(packageRecords) {
+  if (manifest.packages.length > 0) return;
+  manifest.packages = packageRecords.filter((p) => p && p.name);
+  save();
 }
 
 function cleanup() {
@@ -289,5 +299,6 @@ module.exports = {
   cleanup,
   startCleanupCron,
   stopCleanupCron,
+  restore,
   getManifest: () => manifest,
 };

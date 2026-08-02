@@ -6,6 +6,7 @@ const os = require('os');
 const pty = require('node-pty');
 const { generateSessionId } = require('../utils/id');
 const { log, audit } = require('../utils/logger');
+const persistence = require('../persistence');
 const config = require('../config');
 
 const sessions = new Map();
@@ -114,6 +115,7 @@ function create() {
   });
 
   sessions.set(id, session);
+  persistence.saveSession(session);
 
   audit('session_create', id);
   log('info', 'sessionManager', `Session created: ${id}`);
@@ -132,7 +134,7 @@ function list() {
     created_at: s.created_at,
     last_active_at: s.last_active_at,
     cwd: s.cwd,
-    pid: s.ptyProcess.pid,
+    pid: s.ptyProcess ? s.ptyProcess.pid : null,
   }));
 }
 
@@ -146,7 +148,7 @@ function get(id) {
     created_at: session.created_at,
     last_active_at: session.last_active_at,
     cwd: session.cwd,
-    pid: session.ptyProcess.pid,
+    pid: session.ptyProcess ? session.ptyProcess.pid : null,
   };
 }
 
@@ -176,6 +178,10 @@ function exec(id, command) {
 
     if (!session) {
       return reject(new Error('Session not found'));
+    }
+
+    if (!session.ptyProcess) {
+      return reject(new Error('Session is not active'));
     }
 
     if (session.status !== 'active') {
@@ -245,6 +251,7 @@ function exec(id, command) {
         killed: !!result.killed,
         duration_ms: result.duration_ms,
       });
+      persistence.saveSession(session);
       resolve(result);
     };
     execState.finish = finish;
@@ -446,6 +453,7 @@ function close(id) {
 
   emit(session, 'close', { status: 'killed' });
   session.subscribers.clear();
+  persistence.saveSession(session);
 
   audit('session_close', id);
   log('info', 'sessionManager', `Session closed: ${id}`);
@@ -491,6 +499,27 @@ function getAllSessions() {
   return sessions;
 }
 
+function restore(sessionRecords) {
+  for (const rec of sessionRecords) {
+    if (!rec || !rec.id) continue;
+    const ghost = {
+      id: rec.id,
+      status: rec.status === 'active' ? 'interrupted' : rec.status,
+      created_at: rec.created_at,
+      last_active_at: rec.last_active_at,
+      cwd: rec.cwd || '',
+      logPath: rec.log_path || '',
+      logStream: null,
+      logBytes: 0,
+      ptyProcess: null,
+      activeExec: null,
+      subscribers: new Set(),
+      ghost: true,
+    };
+    sessions.set(ghost.id, ghost);
+  }
+}
+
 module.exports = {
   create,
   list,
@@ -503,5 +532,6 @@ module.exports = {
   startSweep,
   stopSweep,
   getStats,
+  restore,
   getAllSessions,
 };

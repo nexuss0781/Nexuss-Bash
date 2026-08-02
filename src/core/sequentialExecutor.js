@@ -4,6 +4,7 @@ const yaml = require('js-yaml');
 const { spawn } = require('child_process');
 const { log, audit } = require('../utils/logger');
 const eventBus = require('./eventBus');
+const persistence = require('../persistence');
 
 const runs = new Map();
 
@@ -114,6 +115,7 @@ async function run(content, timeoutMs) {
     progress: `0/${commands.length}`,
   };
   runs.set(runId, runRecord);
+  persistence.saveRun(runRecord);
 
   log('info', 'sequentialExecutor', `Run started: ${runId} (${commands.length} commands)`);
   audit('run_start', runId, { count: commands.length });
@@ -148,6 +150,7 @@ async function run(content, timeoutMs) {
     const result = await runCommand(cmd, maxTimeout - (Date.now() - startTime));
     runRecord.results.push(result);
     runRecord.progress = `${i + 1}/${commands.length}`;
+    persistence.saveRun(runRecord);
     eventBus.emit('run_step', 'run', runId, {
       step: result.id,
       name: result.name,
@@ -192,6 +195,7 @@ async function run(content, timeoutMs) {
     steps: commands.length,
   });
   log('info', 'sequentialExecutor', `Run ${runId}: ${runRecord.status} (${runRecord.total_duration_ms}ms)`);
+  persistence.saveRun(runRecord);
   eventBus.emit('run_completed', 'run', runId, {
     status: runRecord.status,
     total_duration_ms: runRecord.total_duration_ms,
@@ -229,4 +233,16 @@ function list() {
   }));
 }
 
-module.exports = { run, get, list };
+function restore(runRecords) {
+  for (const rec of runRecords) {
+    if (!rec || !rec.id) continue;
+    const run = rec;
+    if (run.status === 'running') {
+      run.status = 'interrupted';
+      run.finished_at = new Date().toISOString();
+    }
+    runs.set(run.id, run);
+  }
+}
+
+module.exports = { run, get, list, restore };

@@ -15,6 +15,11 @@ const { errorHandler, notFoundHandler } = require('./src/middleware/errorHandler
 const resourceManager = require('./src/core/resourceManager');
 const sessionManager = require('./src/core/sessionManager');
 const packageManager = require('./src/core/packageManager');
+const jobExecutor = require('./src/core/jobExecutor');
+const pipelineExecutor = require('./src/core/pipelineExecutor');
+const sequentialExecutor = require('./src/core/sequentialExecutor');
+const eventBus = require('./src/core/eventBus');
+const persistence = require('./src/persistence');
 
 // Routes
 const healthRoutes = require('./src/routes/health');
@@ -104,7 +109,7 @@ app.use(notFoundHandler);
 app.use(errorHandler);
 
 // Initialize services
-function initialize() {
+async function initialize() {
   log('info', 'server', 'Initializing Nexuss Bash...');
 
   // Start resource manager
@@ -125,6 +130,17 @@ function initialize() {
     // TODO: Kill oldest idle sessions
   });
 
+  // Persistence: connect (local or synced), hydrate in-memory maps, and mark
+  // in-flight records as interrupted (live pty/child processes died with us).
+  await persistence.init();
+  const restored = persistence.hydrate();
+  if (restored.runs) sequentialExecutor.restore(restored.runs);
+  if (restored.jobs) jobExecutor.restore(restored.jobs);
+  if (restored.pipelines) pipelineExecutor.restore(restored.pipelines);
+  if (restored.sessions) sessionManager.restore(restored.sessions);
+  if (restored.events) eventBus.restore(restored.events);
+  if (restored.packages) packageManager.restore(restored.packages);
+
   log('info', 'server', 'Initialization complete');
 }
 
@@ -140,6 +156,9 @@ function shutdown(signal) {
     resourceManager.stop();
     packageManager.stopCleanupCron();
     sessionManager.stopSweep();
+
+    // Persist the in-memory DB to disk + stop the sync daemon
+    persistence.flush();
 
     // Kill all active sessions
     const sessions = sessionManager.getAllSessions();
@@ -164,7 +183,10 @@ function shutdown(signal) {
 }
 
 // Start server
-initialize();
+initialize().catch((err) => {
+  log('error', 'server', 'Initialization failed', { message: err.message, stack: err.stack });
+  process.exit(1);
+});
 
 const server = app.listen(PORT, '0.0.0.0', () => {
   log('info', 'server', `Nexuss Bash server listening on port ${PORT}`);

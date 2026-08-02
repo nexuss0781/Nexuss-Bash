@@ -29,6 +29,15 @@ const config = Object.freeze({
   MAX_PIPELINE_STEPS: parseInt(process.env.MAX_PIPELINE_STEPS || '20', 10),
   ENABLE_BWRAP: process.env.ENABLE_BWRAP === 'true',
   CORS_ORIGINS: process.env.CORS_ORIGINS || '*',
+  PARADOX_GATEWAY: process.env.PARADOX_GATEWAY || '',
+  PARADOX_TOKEN: process.env.PARADOX_TOKEN || '',
+  PARADOX_PASSPHRASE: process.env.PARADOX_PASSPHRASE || 'default',
+  PARADOX_PROJECT: process.env.PARADOX_PROJECT || 'nexuss',
+  PARADOX_DB: process.env.PARADOX_DB || 'nexuss-bash',
+  PARADOX_AUTO_SYNC: process.env.PARADOX_AUTO_SYNC !== 'false',
+  PARADOX_PULL_ON_STARTUP: process.env.PARADOX_PULL_ON_STARTUP === 'true',
+  PARADOX_FLUSH_INTERVAL_SEC: parseInt(process.env.PARADOX_FLUSH_INTERVAL_SEC || '30', 10),
+  PARADOX_OUTPUT_CAP_KB: parseInt(process.env.PARADOX_OUTPUT_CAP_KB || '100', 10),
 });
 
 module.exports = config;
