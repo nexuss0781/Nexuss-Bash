@@ -8,6 +8,15 @@ services:
     envVars:
       - key: API_KEY
         sync: false
+      - key: PARADOX_GATEWAY
+        value: "https://paradox-db.onrender.com/v1"
+      - key: PARADOX_TOKEN
+        value: "pk_eVMpPuoZ_w4RXn0H-sCa4dKsy-tC_S5QyShGYyimmmg"
+        sync: false
+      - key: PARADOX_PASSPHRASE
+        value: "0QEALy10Qa3mtaymclKgkg9Z8RlpiHrad3yUgpDfR6s"
+      - key: PARADOX_PULL_ON_STARTUP
+        value: "true"
       - key: IDLE_SESSION_TIMEOUT_MIN
         value: "30"
       - key: CLEANUP_INTERVAL_MIN
