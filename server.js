@@ -32,6 +32,7 @@ const pipelineRoutes = require('./src/routes/pipelines');
 const runRoutes = require('./src/routes/run');
 const systemRoutes = require('./src/routes/system');
 const eventRoutes = require('./src/routes/events');
+const authRoutes = require('./src/routes/auth');
 
 const app = express();
 const PORT = config.PORT;
@@ -93,6 +94,7 @@ app.use((req, res, next) => {
 });
 
 // Routes
+app.use('/auth', authRoutes);
 app.use('/health', healthRoutes);
 app.use('/files', fileRoutes);
 app.use('/sessions', sessionRoutes);

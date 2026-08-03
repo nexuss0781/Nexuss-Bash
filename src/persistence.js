@@ -139,6 +139,14 @@ function ensureSchema() {
     last_used TEXT,
     payload TEXT
   )`);
+  d.execute(`CREATE TABLE IF NOT EXISTS users (
+    id TEXT PRIMARY KEY,
+    email TEXT UNIQUE,
+    username TEXT,
+    password_hash TEXT,
+    api_key_hash TEXT UNIQUE,
+    created_at TEXT
+  )`);
 }
 
 // ── serialization helpers ───────────────────────────────────────
@@ -321,6 +329,61 @@ function loadTable(table) {
     .filter(Boolean);
 }
 
+// ── user store (per-user API keys, hashed at rest) ───────────────
+
+function upsertUser(user) {
+  if (!ready) return null;
+  try {
+    db().upsert(
+      'users',
+      {
+        id: user.id,
+        email: user.email,
+        username: user.username,
+        password_hash: user.password_hash || null,
+        api_key_hash: user.api_key_hash || null,
+        created_at: user.created_at || new Date().toISOString(),
+      },
+      'id',
+    );
+    markDirty();
+    return user;
+  } catch (err) {
+    log('warn', 'persistence', `upsertUser(${user.email}) failed: ${err.message}`);
+    return null;
+  }
+}
+
+function getUserByApiKeyHash(hash) {
+  if (!ready) return null;
+  try {
+    return db().select('users').find((r) => r.api_key_hash === hash) || null;
+  } catch (err) {
+    log('warn', 'persistence', `getUserByApiKeyHash failed: ${err.message}`);
+    return null;
+  }
+}
+
+function getUserByEmail(email) {
+  if (!ready) return null;
+  try {
+    return db().select('users').find((r) => String(r.email).toLowerCase() === String(email).toLowerCase()) || null;
+  } catch (err) {
+    log('warn', 'persistence', `getUserByEmail failed: ${err.message}`);
+    return null;
+  }
+}
+
+function getUserById(id) {
+  if (!ready) return null;
+  try {
+    return db().select('users').find((r) => r.id === id) || null;
+  } catch (err) {
+    log('warn', 'persistence', `getUserById failed: ${err.message}`);
+    return null;
+  }
+}
+
 // ── boot: hydrate maps + mark interrupted ───────────────────────
 
 function hydrate() {
@@ -396,4 +459,8 @@ module.exports = {
   savePackage,
   removePackage,
   pruneEvents,
+  upsertUser,
+  getUserByApiKeyHash,
+  getUserByEmail,
+  getUserById,
 };
