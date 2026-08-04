@@ -50,25 +50,48 @@ async function init() {
   const opts = {
     name: config.PARADOX_DB,
     passphrase: config.PARADOX_PASSPHRASE,
-    autoSync: false,
+    autoSync: config.PARADOX_AUTO_SYNC !== 'false',
   };
   if (config.PARADOX_GATEWAY) {
     opts.project = config.PARADOX_PROJECT;
     opts.gatewayUrl = config.PARADOX_GATEWAY;
     opts.apiKey = config.PARADOX_TOKEN || undefined;
-    opts.autoSync = config.PARADOX_AUTO_SYNC;
-    opts.pullOnStartup = config.PARADOX_PULL_ON_STARTUP;
+    opts.autoSync = config.PARADOX_AUTO_SYNC !== 'false';
+    opts.pullOnStartup = config.PARADOX_PULL_ON_STARTUP === 'true';
     if (config.PARADOX_STORAGE_CHANNEL) opts.storageChannel = config.PARADOX_STORAGE_CHANNEL;
   }
   enabled = true;
   conn = await connectWithRetry(connect, opts);
   if (!conn) {
     enabled = false;
+    log('error', 'persistence', 'parad connect failed after retries; persistence disabled');
     return;
   }
   await ensureSchema();
   ready = true;
   log('info', 'persistence', `persistence ready (${config.PARADOX_DB}, sync=${opts.autoSync ? 'on' : 'off'})`);
+
+  // Periodic connection health check with auto-reconnect
+  if (config.PARADOX_GATEWAY) {
+    setInterval(async () => {
+      if (!enabled || !conn) return;
+      try {
+        await conn.engine.execute('SELECT 1');
+      } catch (err) {
+        log('warn', 'persistence', `Health check failed (${err.message}), reconnecting...`);
+        ready = false;
+        conn = await connectWithRetry(connect, opts);
+        if (conn) {
+          await ensureSchema();
+          ready = true;
+          log('info', 'persistence', 'Reconnected successfully');
+        } else {
+          enabled = false;
+          log('error', 'persistence', 'Reconnection failed; persistence disabled');
+        }
+      }
+    }, 30000);
+  }
 }
 
 function db() {

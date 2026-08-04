@@ -14,6 +14,9 @@ const CLEANUP_TTL_MS = config.CLEANUP_TTL_HOURS * 60 * 60 * 1000;
 let manifest = { packages: [] };
 let cleanupInterval = null;
 
+// Track async installs
+const pendingInstalls = new Map();
+
 function load() {
   try {
     if (fs.existsSync(MANIFEST_PATH)) {
@@ -73,6 +76,10 @@ function list() {
 function isProtected(name) {
   const pkg = get(name);
   return pkg && pkg.protected;
+}
+
+function getInstallStatus(installId) {
+  return pendingInstalls.get(installId) || { status: 'not_found' };
 }
 
 async function install(name, manager) {
@@ -136,6 +143,49 @@ async function install(name, manager) {
     manager,
     installed_at: entry.installed_at,
     size_kb,
+  };
+}
+
+// Async install - returns immediately with install_id, runs in background
+function installAsync(name, manager) {
+  const installId = generatePackageId();
+
+  pendingInstalls.set(installId, {
+    id: installId,
+    name,
+    manager,
+    status: 'installing',
+    created_at: new Date().toISOString(),
+    result: null,
+    error: null,
+  });
+
+  // Run install in background
+  (async () => {
+    try {
+      const result = await install(name, manager);
+      pendingInstalls.set(installId, {
+        ...pendingInstalls.get(installId),
+        status: 'completed',
+        result,
+        error: null,
+      });
+    } catch (err) {
+      pendingInstalls.set(installId, {
+        ...pendingInstalls.get(installId),
+        status: 'failed',
+        result: null,
+        error: err.message,
+      });
+    }
+  })();
+
+  return {
+    id: installId,
+    name,
+    manager,
+    status: 'installing',
+    created_at: new Date().toISOString(),
   };
 }
 
@@ -294,6 +344,7 @@ module.exports = {
   list,
   isProtected,
   install,
+  installAsync,
   uninstall,
   updateLastUsed,
   cleanup,
@@ -301,4 +352,5 @@ module.exports = {
   stopCleanupCron,
   restore,
   getManifest: () => manifest,
+  getInstallStatus,
 };
