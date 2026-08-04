@@ -24,16 +24,6 @@ router.get('/', (req, res) => {
 
 // POST /jobs - Submit a job
 router.post('/', (req, res) => {
-  if (resourceManager.isThrottled()) {
-    return res.status(503).json({
-      error: {
-        code: 'throttled',
-        message: 'Resource usage too high, try again later',
-        details: { retry_after_sec: 60 },
-      },
-    });
-  }
-
   const { language, code, timeout_sec, limits } = req.body;
 
   if (!language) {
@@ -62,6 +52,16 @@ router.post('/', (req, res) => {
         code: 'bad_request',
         message: 'Invalid timeout_sec',
         details: { field: 'timeout_sec' },
+      },
+    });
+  }
+
+  if (resourceManager.isThrottled()) {
+    return res.status(503).json({
+      error: {
+        code: 'throttled',
+        message: 'Resource usage too high, try again later',
+        details: { retry_after_sec: 60 },
       },
     });
   }
