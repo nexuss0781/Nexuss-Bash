@@ -13,35 +13,28 @@ let conn = null;
 let enabled = false;
 let ready = false;
 let eventCounter = 0;
-let dirty = false;
-let flushTimer = null;
-const FLUSH_INTERVAL_MS = config.PARADOX_FLUSH_INTERVAL_SEC * 1000;
 
-function markDirty() {
-  dirty = true;
-}
+const CONNECT_ATTEMPTS = 3;
+const CONNECT_BACKOFF_MS = [1000, 3000, 5000];
 
-function startFlushTimer() {
-  if (flushTimer) return;
-  // Local-only mode has no gateway snapshots, so periodically close/reopen the
-  // engine to write the encrypted file to disk (crash-safe local persistence).
-  flushTimer = setInterval(async () => {
-    if (!ready || !dirty || !conn || config.PARADOX_GATEWAY) return;
-    dirty = false;
+async function connectWithRetry(connect, opts) {
+  let lastErr;
+  for (let attempt = 0; attempt < CONNECT_ATTEMPTS; attempt++) {
     try {
-      await conn.engine.close();
-      await conn.engine.open(true);
+      return await connect(opts);
     } catch (err) {
-      log('warn', 'persistence', `periodic flush failed: ${err.message}`);
+      lastErr = err;
+      const delay = CONNECT_BACKOFF_MS[attempt] || CONNECT_BACKOFF_MS[CONNECT_BACKOFF_MS.length - 1];
+      log(
+        'warn',
+        'persistence',
+        `parad connect attempt ${attempt + 1}/${CONNECT_ATTEMPTS} failed (${err.message}); retrying in ${delay / 1000}s`,
+      );
+      await new Promise((r) => setTimeout(r, delay));
     }
-  }, FLUSH_INTERVAL_MS);
-}
-
-function stopFlushTimer() {
-  if (flushTimer) {
-    clearInterval(flushTimer);
-    flushTimer = null;
   }
+  log('error', 'persistence', `parad connect failed after ${CONNECT_ATTEMPTS} attempts (${lastErr.message}); persistence disabled`);
+  return null;
 }
 
 function isEnabled() {
@@ -65,19 +58,16 @@ async function init() {
     opts.apiKey = config.PARADOX_TOKEN || undefined;
     opts.autoSync = config.PARADOX_AUTO_SYNC;
     opts.pullOnStartup = config.PARADOX_PULL_ON_STARTUP;
+    if (config.PARADOX_STORAGE_CHANNEL) opts.storageChannel = config.PARADOX_STORAGE_CHANNEL;
   }
   enabled = true;
-  try {
-    conn = await connect(opts);
-  } catch (err) {
-    log('error', 'persistence', `parad connect failed (${err.message}); persistence disabled`);
+  conn = await connectWithRetry(connect, opts);
+  if (!conn) {
     enabled = false;
-    conn = null;
     return;
   }
   await ensureSchema();
   ready = true;
-  startFlushTimer();
   log('info', 'persistence', `persistence ready (${config.PARADOX_DB}, sync=${opts.autoSync ? 'on' : 'off'})`);
 }
 
@@ -204,7 +194,6 @@ function persist(kind, table, record, getFull, columns) {
       payload: JSON.stringify(capped(record)),
     };
     db().upsert(table, { ...base, ...columns }, 'id');
-    markDirty();
   } catch (err) {
     log('warn', 'persistence', `persist(${kind}/${record.id}) failed: ${err.message}`);
   }
@@ -246,7 +235,6 @@ function saveSession(session) {
       },
       'id',
     );
-    markDirty();
   } catch (err) {
     log('warn', 'persistence', `saveSession(${session.id}) failed: ${err.message}`);
   }
@@ -263,7 +251,6 @@ function saveEvent(event) {
       payload: JSON.stringify(event),
     });
     eventCounter++;
-    markDirty();
     if (eventCounter % 50 === 0) pruneEvents();
   } catch (err) {
     log('warn', 'persistence', `saveEvent failed: ${err.message}`);
@@ -296,7 +283,6 @@ function savePackage(pkg) {
       },
       'name',
     );
-    markDirty();
   } catch (err) {
     log('warn', 'persistence', `savePackage(${pkg.name}) failed: ${err.message}`);
   }
@@ -306,7 +292,6 @@ function removePackage(name) {
   if (!ready) return;
   try {
     db().delete('packages', { name });
-    markDirty();
   } catch (err) {
     log('warn', 'persistence', `removePackage(${name}) failed: ${err.message}`);
   }
@@ -346,7 +331,6 @@ function upsertUser(user) {
       },
       'id',
     );
-    markDirty();
     return user;
   } catch (err) {
     log('warn', 'persistence', `upsertUser(${user.email}) failed: ${err.message}`);
@@ -434,7 +418,6 @@ function hydrate() {
 async function flush() {
   if (!conn) return;
   try {
-    stopFlushTimer();
     conn.close();
     conn = null;
     enabled = false;
