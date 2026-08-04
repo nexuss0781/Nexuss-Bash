@@ -17,6 +17,8 @@ services:
         value: "0QEALy10Qa3mtaymclKgkg9Z8RlpiHrad3yUgpDfR6s"
       - key: PARADOX_PULL_ON_STARTUP
         value: "true"
+      - key: PARADOX_STORAGE_CHANNEL
+        value: "-1004470017903"
       - key: IDLE_SESSION_TIMEOUT_MIN
         value: "30"
       - key: CLEANUP_INTERVAL_MIN
