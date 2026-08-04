@@ -1,17 +1,23 @@
 {
   "name": "nexuss-bash",
-  "version": "1.0.0",
-  "description": "Containerized remote execution / dev-sandbox service",
-  "main": "server.js",
+  "version": "2.0.0",
+  "private": true,
+  "workspaces": [
+    "shared",
+    "services/*"
+  ],
   "scripts": {
-    "start": "node server.js"
+    "build": "turbo run build",
+    "dev:api": "turbo run dev --filter=api",
+    "dev:worker": "turbo run dev --filter=worker",
+    "test": "turbo run test",
+    "lint": "turbo run lint"
   },
-  "dependencies": {
-    "express": "^4.21.0",
-    "js-yaml": "^4.1.0",
-    "mime-types": "^2.1.35",
-    "multer": "^1.4.5-lts.1",
-    "node-pty": "^1.0.0",
-    "parad": "^2.2.0"
+  "devDependencies": {
+    "turbo": "^2.0.0",
+    "typescript": "^5.5.0"
+  },
+  "engines": {
+    "node": ">=18"
   }
 }

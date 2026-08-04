@@ -10,6 +10,11 @@ cli/dist/
 cli/nexinal.egg-info/
 frontend/dist/
 ts-client/dist/
+shared/dist/
+services/*/dist/
+*.log
+.env
+.DS_Store
 
 # ── Added by nex-cls ──
 /PROPOSAL.md
