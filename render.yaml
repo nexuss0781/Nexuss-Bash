@@ -5,7 +5,6 @@ services:
     dockerfilePath: ./services/api/Dockerfile
     plan: starter
     healthCheckPath: /health
-    healthCheckPolicy: soft
     envVars:
       - key: API_KEY
         sync: false
