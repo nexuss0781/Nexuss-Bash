@@ -5,7 +5,7 @@ const router = express.Router();
 const packageManager = require('../core/packageManager');
 const resourceManager = require('../core/resourceManager');
 
-// POST /packages/install - Install a package
+// POST /packages/install - Install a package (async)
 router.post('/install', (req, res) => {
   if (resourceManager.isThrottled()) {
     return res.status(503).json({
@@ -39,21 +39,30 @@ router.post('/install', (req, res) => {
     });
   }
 
-  packageManager
-    .install(name, manager)
-    .then((result) => {
-      res.status(201).json({ data: result });
-    })
-    .catch((err) => {
-      if (err.message.includes('Unsupported manager') || err.message.includes('cannot be empty')) {
-        return res.status(400).json({
-          error: { code: 'bad_request', message: err.message, details: {} },
-        });
-      }
-      res.status(500).json({
-        error: { code: 'internal_error', message: err.message, details: {} },
+  try {
+    const result = packageManager.installAsync(name, manager);
+    res.status(202).json({ data: result });
+  } catch (err) {
+    if (err.message.includes('Unsupported manager') || err.message.includes('cannot be empty')) {
+      return res.status(400).json({
+        error: { code: 'bad_request', message: err.message, details: {} },
       });
+    }
+    res.status(500).json({
+      error: { code: 'internal_error', message: err.message, details: {} },
     });
+  }
+});
+
+// GET /packages/install/:id - Check install status
+router.get('/install/:id', (req, res) => {
+  const status = packageManager.getInstallStatus(req.params.id);
+  if (status.status === 'not_found') {
+    return res.status(404).json({
+      error: { code: 'not_found', message: 'Install not found', details: {} },
+    });
+  }
+  res.json({ data: status });
 });
 
 // GET /packages - List all packages with pagination

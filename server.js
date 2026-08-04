@@ -135,6 +135,10 @@ async function initialize() {
   // Persistence: connect (local or synced), hydrate in-memory maps, and mark
   // in-flight records as interrupted (live pty/child processes died with us).
   await persistence.init();
+  if (!persistence.isReady()) {
+    log('error', 'server', 'Persistence failed to initialize; exiting');
+    process.exit(1);
+  }
   const restored = persistence.hydrate();
   if (restored.runs) sequentialExecutor.restore(restored.runs);
   if (restored.jobs) jobExecutor.restore(restored.jobs);
