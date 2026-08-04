@@ -1,7 +1,8 @@
 services:
   - type: web
-    name: nexuss-bash
+    name: nexuss-api
     env: docker
+    dockerfilePath: ./services/api/Dockerfile
     plan: starter
     healthCheckPath: /health
     healthCheckPolicy: soft
@@ -25,3 +26,66 @@ services:
         value: "60"
       - key: MEMORY_LIMIT_MB
         value: "440"
+      - key: REDIS_URL
+        sync: false
+
+  - type: worker
+    name: nexuss-worker
+    env: docker
+    dockerfilePath: ./services/worker/Dockerfile
+    plan: starter
+    envVars:
+      - key: PARADOX_GATEWAY
+        value: "https://paradox-db.onrender.com/v1"
+      - key: PARADOX_TOKEN
+        value: "pk_eVMpPuoZ_w4RXn0H-sCa4dKsy-tC_S5QyShGYyimmmg"
+        sync: false
+      - key: PARADOX_PASSPHRASE
+        value: "0QEALy10Qa3mtaymclKgkg9Z8RlpiHrad3yUgpDfR6s"
+      - key: PARADOX_PULL_ON_STARTUP
+        value: "true"
+      - key: PARADOX_STORAGE_CHANNEL
+        value: "-1004470017903"
+      - key: REDIS_URL
+        sync: false
+
+  - type: cron
+    name: nexuss-scheduler
+    env: docker
+    dockerfilePath: ./services/scheduler/Dockerfile
+    schedule: "*/5 * * * *"
+    envVars:
+      - key: PARADOX_GATEWAY
+        value: "https://paradox-db.onrender.com/v1"
+      - key: PARADOX_TOKEN
+        value: "pk_eVMpPuoZ_w4RXn0H-sCa4dKsy-tC_S5QyShGYyimmmg"
+        sync: false
+      - key: PARADOX_PASSPHRASE
+        value: "0QEALy10Qa3mtaymclKgkg9Z8RlpiHrad3yUgpDfR6s"
+      - key: PARADOX_PULL_ON_STARTUP
+        value: "true"
+      - key: PARADOX_STORAGE_CHANNEL
+        value: "-1004470017903"
+      - key: CLEANUP_INTERVAL_MIN
+        value: "60"
+      - key: CLEANUP_TTL_HOURS
+        value: "6"
+
+  - type: web
+    name: nexuss-webhook
+    env: docker
+    dockerfilePath: ./services/webhook/Dockerfile
+    plan: free
+    healthCheckPath: /health
+    envVars:
+      - key: PARADOX_GATEWAY
+        value: "https://paradox-db.onrender.com/v1"
+      - key: PARADOX_TOKEN
+        value: "pk_eVMpPuoZ_w4RXn0H-sCa4dKsy-tC_S5QyShGYyimmmg"
+        sync: false
+      - key: PARADOX_PASSPHRASE
+        value: "0QEALy10Qa3mtaymclKgkg9Z8RlpiHrad3yUgpDfR6s"
+      - key: PARADOX_PULL_ON_STARTUP
+        value: "true"
+      - key: PARADOX_STORAGE_CHANNEL
+        value: "-1004470017903"
