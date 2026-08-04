@@ -23,12 +23,6 @@ const upload = multer({
 
 // POST / — execute commands, return results
 router.post('/', upload.single('file'), async (req, res) => {
-  if (resourceManager.isThrottled()) {
-    return res.status(503).json({
-      error: { code: 'throttled', message: 'Resource usage too high', details: { retry_after_sec: 60 } },
-    });
-  }
-
   try {
     let content = null;
 
@@ -36,6 +30,18 @@ router.post('/', upload.single('file'), async (req, res) => {
       content = req.file.buffer.toString('utf8');
     } else if (req.body && (req.body.commands || req.body.yaml)) {
       content = req.body.commands ? JSON.stringify({ commands: req.body.commands }) : req.body.yaml;
+    }
+
+    if (!content) {
+      return res.status(400).json({
+        error: { code: 'bad_request', message: 'Provide commands or YAML', details: {} },
+      });
+    }
+
+    if (resourceManager.isThrottled()) {
+      return res.status(503).json({
+        error: { code: 'throttled', message: 'Resource usage too high', details: { retry_after_sec: 60 } },
+      });
     }
 
     if (!content) {

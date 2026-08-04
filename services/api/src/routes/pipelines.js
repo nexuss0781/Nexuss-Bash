@@ -22,12 +22,6 @@ const upload = multer({
 
 // POST /pipelines/run — Upload YAML, execute, return results in one call
 router.post('/run', upload.single('file'), async (req, res) => {
-  if (resourceManager.isThrottled()) {
-    return res.status(503).json({
-      error: { code: 'throttled', message: 'Resource usage too high', details: { retry_after_sec: 60 } },
-    });
-  }
-
   try {
     let yamlContent = null;
 
@@ -50,6 +44,12 @@ router.post('/run', upload.single('file'), async (req, res) => {
       });
     }
 
+    if (resourceManager.isThrottled()) {
+      return res.status(503).json({
+        error: { code: 'throttled', message: 'Resource usage too high', details: { retry_after_sec: 60 } },
+      });
+    }
+
     const timeoutMs = Math.min(parseInt(req.body && req.body.timeout, 10) || 120000, 300000);
     const result = await pipelineExecutor.submitSync(yamlContent, null, timeoutMs);
 
@@ -63,12 +63,6 @@ router.post('/run', upload.single('file'), async (req, res) => {
 
 // POST /pipelines — Submit async (fire and forget, poll with GET /pipelines/:id)
 router.post('/', upload.single('file'), (req, res) => {
-  if (resourceManager.isThrottled()) {
-    return res.status(503).json({
-      error: { code: 'throttled', message: 'Resource usage too high', details: { retry_after_sec: 60 } },
-    });
-  }
-
   let yamlContent = null;
   let fileId = null;
 
@@ -82,6 +76,12 @@ router.post('/', upload.single('file'), (req, res) => {
   if (!yamlContent && !fileId) {
     return res.status(400).json({
       error: { code: 'bad_request', message: 'Provide "yaml", "file_id", or upload a file', details: {} },
+    });
+  }
+
+  if (resourceManager.isThrottled()) {
+    return res.status(503).json({
+      error: { code: 'throttled', message: 'Resource usage too high', details: { retry_after_sec: 60 } },
     });
   }
 

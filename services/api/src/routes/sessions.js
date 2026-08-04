@@ -7,17 +7,16 @@ const resourceManager = require('../core/resourceManager');
 
 // POST /sessions - Create new session
 router.post('/', (req, res) => {
-  if (resourceManager.isThrottled()) {
-    return res.status(503).json({
-      error: {
-        code: 'throttled',
-        message: 'Resource usage too high, try again later',
-        details: { retry_after_sec: 60 },
-      },
-    });
-  }
-
   try {
+    if (resourceManager.isThrottled()) {
+      return res.status(503).json({
+        error: {
+          code: 'throttled',
+          message: 'Resource usage too high, try again later',
+          details: { retry_after_sec: 60 },
+        },
+      });
+    }
     const session = sessionManager.create();
     res.status(201).json({ data: session });
   } catch (err) {
@@ -65,16 +64,6 @@ router.get('/:id/logs', (req, res) => {
 
 // POST /sessions/:id/exec - Execute command in session
 router.post('/:id/exec', (req, res) => {
-  if (resourceManager.isThrottled()) {
-    return res.status(503).json({
-      error: {
-        code: 'throttled',
-        message: 'Resource usage too high, try again later',
-        details: { retry_after_sec: 60 },
-      },
-    });
-  }
-
   const { command } = req.body;
 
   if (!command) {
@@ -83,6 +72,16 @@ router.post('/:id/exec', (req, res) => {
         code: 'bad_request',
         message: 'Missing command in request body',
         details: { field: 'command' },
+      },
+    });
+  }
+
+  if (resourceManager.isThrottled()) {
+    return res.status(503).json({
+      error: {
+        code: 'throttled',
+        message: 'Resource usage too high, try again later',
+        details: { retry_after_sec: 60 },
       },
     });
   }

@@ -7,16 +7,6 @@ const resourceManager = require('../core/resourceManager');
 
 // POST /packages/install - Install a package (async)
 router.post('/install', (req, res) => {
-  if (resourceManager.isThrottled()) {
-    return res.status(503).json({
-      error: {
-        code: 'throttled',
-        message: 'Resource usage too high, try again later',
-        details: { retry_after_sec: 60 },
-      },
-    });
-  }
-
   const { name, manager } = req.body;
 
   if (!name) {
@@ -35,6 +25,16 @@ router.post('/install', (req, res) => {
         code: 'bad_request',
         message: 'Missing manager (apt, pip, npm, composer)',
         details: { field: 'manager' },
+      },
+    });
+  }
+
+  if (resourceManager.isThrottled()) {
+    return res.status(503).json({
+      error: {
+        code: 'throttled',
+        message: 'Resource usage too high, try again later',
+        details: { retry_after_sec: 60 },
       },
     });
   }

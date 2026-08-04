@@ -16,9 +16,9 @@ let thresholdStatus = 'ok';
 let pollInterval = null;
 
 const THRESHOLDS = {
-  soft: 70,
-  throttle: 85,
-  hard: 95,
+  soft: 85,
+  throttle: 95,
+  hard: 98,
 };
 
 let onHardThreshold = null;
