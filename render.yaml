@@ -11,10 +11,9 @@ services:
       - key: PARADOX_GATEWAY
         value: "https://paradox-db.onrender.com/v1"
       - key: PARADOX_TOKEN
-        value: "pk_eVMpPuoZ_w4RXn0H-sCa4dKsy-tC_S5QyShGYyimmmg"
         sync: false
       - key: PARADOX_PASSPHRASE
-        value: "0QEALy10Qa3mtaymclKgkg9Z8RlpiHrad3yUgpDfR6s"
+        sync: false
       - key: PARADOX_PULL_ON_STARTUP
         value: "true"
       - key: PARADOX_STORAGE_CHANNEL
@@ -37,10 +36,9 @@ services:
       - key: PARADOX_GATEWAY
         value: "https://paradox-db.onrender.com/v1"
       - key: PARADOX_TOKEN
-        value: "pk_eVMpPuoZ_w4RXn0H-sCa4dKsy-tC_S5QyShGYyimmmg"
         sync: false
       - key: PARADOX_PASSPHRASE
-        value: "0QEALy10Qa3mtaymclKgkg9Z8RlpiHrad3yUgpDfR6s"
+        sync: false
       - key: PARADOX_PULL_ON_STARTUP
         value: "true"
       - key: PARADOX_STORAGE_CHANNEL
@@ -57,10 +55,9 @@ services:
       - key: PARADOX_GATEWAY
         value: "https://paradox-db.onrender.com/v1"
       - key: PARADOX_TOKEN
-        value: "pk_eVMpPuoZ_w4RXn0H-sCa4dKsy-tC_S5QyShGYyimmmg"
         sync: false
       - key: PARADOX_PASSPHRASE
-        value: "0QEALy10Qa3mtaymclKgkg9Z8RlpiHrad3yUgpDfR6s"
+        sync: false
       - key: PARADOX_PULL_ON_STARTUP
         value: "true"
       - key: PARADOX_STORAGE_CHANNEL
@@ -80,10 +77,9 @@ services:
       - key: PARADOX_GATEWAY
         value: "https://paradox-db.onrender.com/v1"
       - key: PARADOX_TOKEN
-        value: "pk_eVMpPuoZ_w4RXn0H-sCa4dKsy-tC_S5QyShGYyimmmg"
         sync: false
       - key: PARADOX_PASSPHRASE
-        value: "0QEALy10Qa3mtaymclKgkg9Z8RlpiHrad3yUgpDfR6s"
+        sync: false
       - key: PARADOX_PULL_ON_STARTUP
         value: "true"
       - key: PARADOX_STORAGE_CHANNEL
