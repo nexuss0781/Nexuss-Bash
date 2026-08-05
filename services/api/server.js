@@ -165,7 +165,7 @@ async function initialize() {
 }
 
 // Graceful shutdown
-function shutdown(signal) {
+async function shutdown(signal) {
   log('info', 'server', `Received ${signal}, shutting down...`);
 
   // Stop accepting new connections
@@ -177,21 +177,24 @@ function shutdown(signal) {
     sessionManager.stopSweep();
 
     // Persist the in-memory DB to disk + stop the sync daemon
-    await flush();
-
-    // Kill all active sessions
-    const sessions = sessionManager.getAllSessions();
-    for (const [id, session] of sessions) {
-      if (session.status === 'active') {
-        sessionManager.close(id);
+    flush().then(() => {
+      // Kill all active sessions
+      const sessions = sessionManager.getAllSessions();
+      for (const [id, session] of sessions) {
+        if (session.status === 'active') {
+          sessionManager.close(id);
+        }
       }
-    }
 
-    // Audit final entry
-    audit('server_shutdown', 'system', { signal });
+      // Audit final entry
+      audit('server_shutdown', 'system', { signal });
 
-    log('info', 'server', 'Shutdown complete');
-    process.exit(0);
+      log('info', 'server', 'Shutdown complete');
+      process.exit(0);
+    }).catch((err) => {
+      log('error', 'server', `Shutdown flush failed: ${err.message}`);
+      process.exit(1);
+    });
   });
 
   // Force exit after 15 seconds
