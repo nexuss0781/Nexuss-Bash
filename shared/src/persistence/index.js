@@ -2,8 +2,8 @@
 
 const fs = require('fs');
 const path = require('path');
-const config = require('./config');
-const { log } = require('./utils/logger');
+const config = require('../config');
+const { log } = require('../utils/logger');
 
 const OUTPUT_CAP_BYTES = config.PARADOX_OUTPUT_CAP_KB * 1024;
 const MAX_EVENTS = 1000;

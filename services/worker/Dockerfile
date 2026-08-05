@@ -15,7 +15,7 @@ RUN npm install && npm run build
 WORKDIR /app
 COPY services/worker/package*.json ./services/worker/
 WORKDIR /app/services/worker
-RUN npm ci
+RUN npm install
 
 # Copy source code
 WORKDIR /app

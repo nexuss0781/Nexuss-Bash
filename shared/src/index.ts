@@ -1,6 +1,10 @@
 // Shared package exports
-export * from './config/index.js';
-export * from './persistence/index.js';
-export * from './utils/logger.js';
-export * from './utils/keys.js';
-export * from './utils/id.js';
+import config = require('./config/index');
+import persistence = require('./persistence/index');
+import logger = require('./utils/logger');
+import keys = require('./utils/keys');
+import id = require('./utils/id');
+
+const shared = { ...config, ...persistence, ...logger, ...keys, ...id };
+
+export = shared;

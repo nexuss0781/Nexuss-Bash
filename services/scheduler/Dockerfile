@@ -14,7 +14,7 @@ RUN npm install && npm run build
 WORKDIR /app
 COPY services/scheduler/package*.json ./services/scheduler/
 WORKDIR /app/services/scheduler
-RUN npm ci
+RUN npm install
 
 # Copy source code
 WORKDIR /app
