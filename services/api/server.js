@@ -19,7 +19,7 @@ const jobExecutor = require('./src/core/jobExecutor');
 const pipelineExecutor = require('./src/core/pipelineExecutor');
 const sequentialExecutor = require('./src/core/sequentialExecutor');
 const eventBus = require('./src/core/eventBus');
-const { init, hydrate, flush, isReady, cleanup } = require('@nexuss/shared/persistence');
+const { init, hydrate, flush, isReady } = require('@nexuss/shared/persistence');
 
 // Routes
 const healthRoutes = require('./src/routes/health');
@@ -114,6 +114,11 @@ app.use(errorHandler);
 async function initialize() {
   log('info', 'server', 'Initializing Nexuss Bash...');
 
+  if (!config.API_KEY) {
+    log('error', 'server', 'API_KEY is required; exiting');
+    process.exit(1);
+  }
+
   // Start resource manager
   resourceManager.start();
 
@@ -134,10 +139,11 @@ async function initialize() {
 
   // Persistence: connect (local or synced), hydrate in-memory maps, and mark
   // in-flight records as interrupted (live pty/child processes died with us).
+  // A gateway blip must not take the API down — start degraded and let the
+  // persistence health check reconnect in the background.
   await init();
   if (!isReady()) {
-    log('error', 'server', 'Persistence failed to initialize; exiting');
-    process.exit(1);
+    log('warn', 'server', 'Persistence not ready; starting in degraded mode (retrying in background)');
   }
   const restored = hydrate();
   if (restored.runs) sequentialExecutor.restore(restored.runs);
@@ -153,7 +159,7 @@ async function initialize() {
   const CLEANUP_INTERVAL_MS = config.CLEANUP_INTERVAL_MIN * 60 * 1000;
   setInterval(() => {
     try {
-      const removed = cleanup();
+      const removed = packageManager.cleanup();
       if (removed > 0) {
         log('info', 'scheduler', `Cleanup removed ${removed} packages`);
       }

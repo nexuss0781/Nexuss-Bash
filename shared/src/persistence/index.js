@@ -62,33 +62,40 @@ async function init() {
   }
   enabled = true;
   conn = await connectWithRetry(connect, opts);
-  if (!conn) {
-    enabled = false;
-    log('error', 'persistence', 'parad connect failed after retries; persistence disabled');
-    return;
+  if (conn) {
+    await ensureSchema();
+    ready = true;
+    log('info', 'persistence', `persistence ready (${config.PARADOX_DB}, sync=${opts.autoSync ? 'on' : 'off'})`);
+  } else {
+    ready = false;
+    log('error', 'persistence', 'parad connect failed after retries; persistence disabled (retrying in background)');
   }
-  await ensureSchema();
-  ready = true;
-  log('info', 'persistence', `persistence ready (${config.PARADOX_DB}, sync=${opts.autoSync ? 'on' : 'off'})`);
 
-  // Periodic connection health check with auto-reconnect
+  // Periodic connection health check with auto-reconnect. Registered for any
+  // gateway config so a failed initial connect (or a later drop) self-heals.
   if (config.PARADOX_GATEWAY) {
     setInterval(async () => {
-      if (!enabled || !conn) return;
-      try {
-        await conn.engine.execute('SELECT 1');
-      } catch (err) {
-        log('warn', 'persistence', `Health check failed (${err.message}), reconnecting...`);
-        ready = false;
-        conn = await connectWithRetry(connect, opts);
-        if (conn) {
-          await ensureSchema();
-          ready = true;
-          log('info', 'persistence', 'Reconnected successfully');
-        } else {
-          enabled = false;
-          log('error', 'persistence', 'Reconnection failed; persistence disabled');
+      if (conn) {
+        try {
+          await conn.engine.execute('SELECT 1');
+          return;
+        } catch (err) {
+          log('warn', 'persistence', `Health check failed (${err.message}), reconnecting...`);
+          ready = false;
         }
+      } else {
+        log('warn', 'persistence', 'Persistence not connected; attempting reconnect...');
+      }
+      const reconnected = await connectWithRetry(connect, opts);
+      if (reconnected) {
+        conn = reconnected;
+        await ensureSchema();
+        ready = true;
+        enabled = true;
+        log('info', 'persistence', 'Reconnected successfully');
+      } else {
+        enabled = false;
+        log('error', 'persistence', 'Reconnection failed; persistence disabled');
       }
     }, 30000);
   }

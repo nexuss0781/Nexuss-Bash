@@ -2,47 +2,55 @@
 
 const config = require('@nexuss/shared/config');
 const { log } = require('@nexuss/shared/utils');
-const { cleanup } = require('@nexuss/shared/persistence');
 
-const CLEANUP_INTERVAL_MS = config.CLEANUP_INTERVAL_MIN * 60 * 1000;
-const CLEANUP_TTL_MS = config.CLEANUP_TTL_HOURS * 60 * 60 * 1000;
+// Keepalive pinger. Run by Render as a cron service (default: every 5 min) to
+// prevent the Paradox gateway (and optionally the API) from idle-sleeping.
+// Package cleanup runs in the API process itself (packageManager cron).
 
-let cleanupInterval = null;
+function healthUrl(raw) {
+  if (!raw) return null;
+  return raw.replace(/\/+$/, '').replace(/\/v1$/, '') + '/health';
+}
 
-function runCleanup() {
-  log('info', 'scheduler', 'Running package cleanup...');
+async function ping(url) {
+  const ctrl = new AbortController();
+  const timeout = setTimeout(() => ctrl.abort(), 15000);
   try {
-    const removed = cleanup();
-    if (removed > 0) {
-      log('info', 'scheduler', `Cleanup removed ${removed} packages`);
-    }
+    const res = await fetch(url, { signal: ctrl.signal });
+    clearTimeout(timeout);
+    log('info', 'scheduler', `keepalive ${url} -> ${res.status}`);
+    return res.status;
   } catch (err) {
-    log('error', 'scheduler', `Cleanup failed: ${err.message}`);
+    clearTimeout(timeout);
+    log('warn', 'scheduler', `keepalive ${url} failed: ${err.message}`);
+    return null;
   }
+}
+
+async function run() {
+  const targets = [];
+  const gateway = healthUrl(config.PARADOX_GATEWAY);
+  if (gateway) targets.push(gateway);
+  if (config.KEEPALIVE_URL) targets.push(config.KEEPALIVE_URL);
+  if (targets.length === 0) {
+    log('warn', 'scheduler', 'No keepalive targets configured (PARADOX_GATEWAY / KEEPALIVE_URL)');
+    return;
+  }
+  await Promise.all(targets.map(ping));
 }
 
 function start() {
-  if (cleanupInterval) return;
-  
-  // Run immediately on startup
-  runCleanup();
-  
-  // Schedule periodic cleanup
-  cleanupInterval = setInterval(runCleanup, CLEANUP_INTERVAL_MS);
-  log('info', 'scheduler', `Cleanup cron started (interval: ${CLEANUP_INTERVAL_MS}ms)`);
+  run();
+  setInterval(run, (config.KEEPALIVE_INTERVAL_MIN || 5) * 60 * 1000);
 }
 
 function stop() {
-  if (cleanupInterval) {
-    clearInterval(cleanupInterval);
-    cleanupInterval = null;
-    log('info', 'scheduler', 'Cleanup cron stopped');
-  }
+  // long-lived loop only runs via start(); cron invocation exits after run()
 }
 
-// Handle cron trigger (for Render cron job)
+// Render cron trigger
 if (require.main === module) {
-  runCleanup().then(() => process.exit(0)).catch(() => process.exit(1));
+  run().then(() => process.exit(0)).catch(() => process.exit(1));
 }
 
-module.exports = { start, stop, runCleanup };
+module.exports = { start, stop, run };

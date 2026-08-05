@@ -62,6 +62,8 @@ services:
         value: "true"
       - key: PARADOX_STORAGE_CHANNEL
         value: "-1004470017903"
+      - key: KEEPALIVE_URL
+        value: "https://nexuss-api.onrender.com"
       - key: CLEANUP_INTERVAL_MIN
         value: "60"
       - key: CLEANUP_TTL_HOURS
