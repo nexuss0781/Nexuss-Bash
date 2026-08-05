@@ -7,7 +7,7 @@
     "dev": "node --watch src/index.js"
   },
   "dependencies": {
-    "@nexuss/shared": "workspace:*",
+    "@nexuss/shared": "file:../shared",
     "bullmq": "^5.0.0",
     "ioredis": "^5.4.0"
   }
