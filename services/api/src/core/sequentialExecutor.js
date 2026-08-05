@@ -2,6 +2,7 @@
 
 const yaml = require('js-yaml');
 const { spawn } = require('child_process');
+const config = require('@nexuss/shared/config');
 const { log, audit } = require('@nexuss/shared/utils');
 const eventBus = require('./eventBus');
 const { init, hydrate, flush, isReady, isEnabled, saveRun, saveJob, savePipeline, saveSession, saveEvent, savePackage, removePackage, pruneEvents, upsertUser, getUserByApiKeyHash, getUserByEmail, getUserById } = require('@nexuss/shared/persistence');
@@ -25,6 +26,9 @@ function normalizeCommands(doc) {
   const raw = doc.commands || doc.steps || doc;
   if (!Array.isArray(raw) || raw.length === 0) {
     throw new Error('Provide a "commands" list (array of strings or objects)');
+  }
+  if (raw.length > config.MAX_PIPELINE_STEPS) {
+    throw new Error(`Run exceeds maximum of ${config.MAX_PIPELINE_STEPS} steps`);
   }
   return raw.map((item, i) => {
     if (typeof item === 'string') {
