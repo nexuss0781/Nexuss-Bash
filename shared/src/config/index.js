@@ -1,15 +1,7 @@
 'use strict';
 
-const required = ['API_KEY'];
-
-for (const key of required) {
-  if (!process.env[key]) {
-    throw new Error(`Missing required environment variable: ${key}`);
-  }
-}
-
 const config = Object.freeze({
-  API_KEY: process.env.API_KEY,
+  API_KEY: process.env.API_KEY || '',
   PORT: parseInt(process.env.PORT || '3000', 10),
   WORKSPACE_BASE: process.env.WORKSPACE_BASE || '/workspace',
   IDLE_SESSION_TIMEOUT_MIN: parseInt(process.env.IDLE_SESSION_TIMEOUT_MIN || '30', 10),
@@ -38,6 +30,8 @@ const config = Object.freeze({
   PARADOX_PULL_ON_STARTUP: process.env.PARADOX_PULL_ON_STARTUP === 'true',
   PARADOX_STORAGE_CHANNEL: process.env.PARADOX_STORAGE_CHANNEL || '',
   PARADOX_OUTPUT_CAP_KB: parseInt(process.env.PARADOX_OUTPUT_CAP_KB || '100', 10),
+  KEEPALIVE_URL: process.env.KEEPALIVE_URL || '',
+  KEEPALIVE_INTERVAL_MIN: parseInt(process.env.KEEPALIVE_INTERVAL_MIN || '5', 10),
 });
 
 module.exports = config;
