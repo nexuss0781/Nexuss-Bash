@@ -5,18 +5,22 @@ WORKDIR /app
 
 RUN apk add --no-cache python3 make g++
 
-COPY package*.json ./
+# Build shared package first
 COPY shared/package*.json ./shared/
+WORKDIR /app/shared
+RUN npm ci && npm run build
+
+# Install webhook dependencies
+WORKDIR /app
 COPY services/webhook/package*.json ./services/webhook/
+WORKDIR /app/services/webhook
+RUN npm ci
 
-RUN npm ci --workspaces --include-workspace-root
-
+# Copy source code
+WORKDIR /app
 COPY shared/src ./shared/src
 COPY shared/tsconfig.json ./shared/
 COPY services/webhook/src ./services/webhook/src
-
-WORKDIR /app/shared
-RUN npm run build
 
 WORKDIR /app/services/webhook
 
