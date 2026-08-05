@@ -19,7 +19,7 @@ const jobExecutor = require('./src/core/jobExecutor');
 const pipelineExecutor = require('./src/core/pipelineExecutor');
 const sequentialExecutor = require('./src/core/sequentialExecutor');
 const eventBus = require('./src/core/eventBus');
-const { init, hydrate, flush, isReady } = require('@nexuss/shared/persistence');
+const { init, hydrate, flush, isReady, cleanup } = require('@nexuss/shared/persistence');
 
 // Routes
 const healthRoutes = require('./src/routes/health');
@@ -148,6 +148,20 @@ async function initialize() {
   if (restored.packages) packageManager.restore(restored.packages);
 
   log('info', 'server', 'Initialization complete');
+
+  // In-process cleanup scheduler (replaces separate cron service)
+  const CLEANUP_INTERVAL_MS = config.CLEANUP_INTERVAL_MIN * 60 * 1000;
+  setInterval(() => {
+    try {
+      const removed = cleanup();
+      if (removed > 0) {
+        log('info', 'scheduler', `Cleanup removed ${removed} packages`);
+      }
+    } catch (err) {
+      log('error', 'scheduler', `Cleanup failed: ${err.message}`);
+    }
+  }, CLEANUP_INTERVAL_MS);
+  log('info', 'scheduler', `In-process cleanup cron started (every ${config.CLEANUP_INTERVAL_MIN} min)`);
 }
 
 // Graceful shutdown
@@ -160,7 +174,6 @@ function shutdown(signal) {
 
     // Stop services
     resourceManager.stop();
-    packageManager.stopCleanupCron();
     sessionManager.stopSweep();
 
     // Persist the in-memory DB to disk + stop the sync daemon

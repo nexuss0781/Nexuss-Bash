@@ -6,23 +6,25 @@ WORKDIR /app
 # Install system dependencies
 RUN apk add --no-cache python3 make g++ sqlite-dev
 
-# Build shared package first
-COPY shared/package*.json ./shared/
-WORKDIR /app/shared
-RUN npm install && npm run build
+# Copy package files
+COPY package*.json ./
+COPY shared/package.json ./shared/
+COPY services/api/package.json ./services/api/
 
-# Install API dependencies
-WORKDIR /app
-COPY services/api/package*.json ./services/api/
-WORKDIR /app/services/api
-RUN npm install
+# Install dependencies
+RUN npm ci --workspaces --include-workspace-root
 
 # Copy source code
-WORKDIR /app
 COPY shared/src ./shared/src
 COPY shared/tsconfig.json ./shared/
 COPY services/api/src ./services/api/src
 COPY services/api/server.js ./services/api/
+
+# Build shared package
+WORKDIR /app/shared
+RUN npm run build
+
+WORKDIR /app/services/api
 
 EXPOSE 3000
 
