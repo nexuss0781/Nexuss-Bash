@@ -1,6 +1,6 @@
 'use strict';
 
-const { config } = require('@nexuss/shared/config');
+const config = require('@nexuss/shared/config');
 
 const corsOrigins = config.CORS_ORIGINS || '*';
 const ALLOWED_ORIGINS = corsOrigins.split(',').map((s) => s.trim()).filter(Boolean);

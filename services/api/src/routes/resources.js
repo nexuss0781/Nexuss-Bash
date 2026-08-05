@@ -5,7 +5,7 @@ const router = express.Router();
 const resourceManager = require('../core/resourceManager');
 const sessionManager = require('../core/sessionManager');
 const jobExecutor = require('../core/jobExecutor');
-const { config } = require('@nexuss/shared/config');
+const config = require('@nexuss/shared/config');
 
 router.get('/', (req, res) => {
   const snapshot = resourceManager.getSnapshot();

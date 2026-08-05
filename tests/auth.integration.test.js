@@ -6,7 +6,7 @@ if (!process.env.NEXUSS_BASE_URL) {
   process.env.PARADOX_DB = 'auth-it-' + process.pid;
   process.env.PARADOX_PASSPHRASE = 'testpass';
   process.env.WORKSPACE_BASE = '/tmp/opencode/nexauth';
-  require('../server.js');
+  require('../services/api/server.js');
 }
 
 let ok = 0, fail = 0;

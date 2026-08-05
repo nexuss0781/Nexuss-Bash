@@ -6,7 +6,7 @@ const fs = require('fs');
 const path = require('path');
 const mime = require('mime-types');
 const router = express.Router();
-const { config } = require('@nexuss/shared/config');
+const config = require('@nexuss/shared/config');
 const { generateFileId } = require('../utils/id');
 const { log, audit } = require('@nexuss/shared/utils');
 

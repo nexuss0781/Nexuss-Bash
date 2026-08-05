@@ -4,7 +4,7 @@ const { spawn } = require('child_process');
 const path = require('path');
 const { createCgroup, assignPidToCgroup, destroyCgroup, buildUlimitArgs, isCgroupV2Available } = require('./isolation');
 const { log } = require('../utils/logger');
-const config = require('../config');
+const config = require('@nexuss/shared/config');
 
 const DEFAULT_TIMEOUT_MS = 30000;
 const SIGTERM_GRACE_MS = 5000;

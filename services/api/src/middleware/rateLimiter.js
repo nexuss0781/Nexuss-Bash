@@ -1,6 +1,6 @@
 'use strict';
 
-const { config } = require('@nexuss/shared/config');
+const config = require('@nexuss/shared/config');
 
 const rateLimits = new Map();
 

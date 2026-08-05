@@ -10,7 +10,7 @@ const sessionManager = require('../core/sessionManager');
 const jobExecutor = require('../core/jobExecutor');
 const pipelineExecutor = require('../core/pipelineExecutor');
 const packageManager = require('../core/packageManager');
-const { config } = require('@nexuss/shared/config');
+const config = require('@nexuss/shared/config');
 
 const UPLOAD_DIR = path.join(config.WORKSPACE_BASE, 'uploads');
 const METADATA_PATH = path.join(UPLOAD_DIR, 'metadata.json');

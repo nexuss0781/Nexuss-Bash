@@ -8,7 +8,7 @@ const { generateJobId } = require('../utils/id');
 const { log, audit } = require('@nexuss/shared/utils');
 const eventBus = require('./eventBus');
 const { init, hydrate, flush, isReady, isEnabled, saveRun, saveJob, savePipeline, saveSession, saveEvent, savePackage, removePackage, pruneEvents, upsertUser, getUserByApiKeyHash, getUserByEmail, getUserById } = require('@nexuss/shared/persistence');
-const { config } = require('@nexuss/shared/config');
+const config = require('@nexuss/shared/config');
 
 const jobs = new Map();
 const JOB_TIMEOUT_MS = config.JOB_TIMEOUT_SEC * 1000;

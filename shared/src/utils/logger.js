@@ -9,6 +9,7 @@ let auditStream = null;
 
 function getAuditStream() {
   if (!auditStream) {
+    fs.mkdirSync(path.dirname(AUDIT_LOG_PATH), { recursive: true });
     auditStream = fs.createWriteStream(AUDIT_LOG_PATH, { flags: 'a' });
   }
   return auditStream;

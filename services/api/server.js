@@ -3,7 +3,7 @@
 const express = require('express');
 const path = require('path');
 const fs = require('fs');
-const { config } = require('@nexuss/shared/config');
+const config = require('@nexuss/shared/config');
 const { log, audit } = require('@nexuss/shared/utils');
 const authMiddleware = require('./src/middleware/auth');
 const corsMiddleware = require('./src/middleware/cors');

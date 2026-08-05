@@ -5,7 +5,7 @@ const path = require('path');
 const { generatePackageId } = require('../utils/id');
 const { log, audit } = require('@nexuss/shared/utils');
 const { init, hydrate, flush, isReady, isEnabled, saveRun, saveJob, savePipeline, saveSession, saveEvent, savePackage, removePackage, pruneEvents, upsertUser, getUserByApiKeyHash, getUserByEmail, getUserById } = require('@nexuss/shared/persistence');
-const { config } = require('@nexuss/shared/config');
+const config = require('@nexuss/shared/config');
 
 const MANIFEST_PATH = path.join(__dirname, '..', '..', 'data', 'packages.json');
 const CLEANUP_INTERVAL_MS = config.CLEANUP_INTERVAL_MIN * 60 * 1000;
@@ -33,6 +33,7 @@ function load() {
 }
 
 function save() {
+  fs.mkdirSync(path.dirname(MANIFEST_PATH), { recursive: true });
   fs.writeFileSync(MANIFEST_PATH, JSON.stringify(manifest, null, 2));
 }
 
