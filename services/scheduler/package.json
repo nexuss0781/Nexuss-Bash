@@ -7,6 +7,6 @@
     "dev": "node --watch src/index.js"
   },
   "dependencies": {
-    "@nexuss/shared": "file:../../shared"
+    "@nexuss/shared": "workspace:*"
   }
 }

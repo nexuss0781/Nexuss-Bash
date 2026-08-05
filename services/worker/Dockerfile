@@ -6,22 +6,22 @@ WORKDIR /app
 # Install system dependencies for apt packages
 RUN apk add --no-cache python3 make g++
 
-# Build shared package first
-COPY shared/package*.json ./shared/
-WORKDIR /app/shared
-RUN npm install && npm run build
+# Copy package files
+COPY package*.json ./
+COPY shared/package.json ./shared/
+COPY services/worker/package.json ./services/worker/
 
-# Install worker dependencies
-WORKDIR /app
-COPY services/worker/package*.json ./services/worker/
-WORKDIR /app/services/worker
-RUN npm install
+# Install dependencies
+RUN npm ci --workspaces --include-workspace-root
 
 # Copy source code
-WORKDIR /app
 COPY shared/src ./shared/src
 COPY shared/tsconfig.json ./shared/
 COPY services/worker/src ./services/worker/src
+
+# Build shared package
+WORKDIR /app/shared
+RUN npm run build
 
 WORKDIR /app/services/worker
 
