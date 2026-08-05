@@ -14,7 +14,7 @@ RUN npm install && npm run build
 WORKDIR /app
 COPY services/webhook/package*.json ./services/webhook/
 WORKDIR /app/services/webhook
-RUN npm ci
+RUN npm install
 
 # Copy source code
 WORKDIR /app
