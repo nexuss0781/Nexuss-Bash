@@ -6,10 +6,10 @@ WORKDIR /app
 # Install system dependencies for apt packages
 RUN apk add --no-cache python3 make g++
 
-# Copy package files
+# Copy package files + lock files
 COPY package*.json ./
-COPY shared/package.json ./shared/
-COPY services/worker/package.json ./services/worker/
+COPY shared/package*.json ./shared/
+COPY services/worker/package*.json ./services/worker/
 
 # Install dependencies
 RUN npm ci --workspaces --include-workspace-root

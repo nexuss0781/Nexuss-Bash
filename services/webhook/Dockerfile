@@ -6,8 +6,8 @@ WORKDIR /app
 RUN apk add --no-cache python3 make g++
 
 COPY package*.json ./
-COPY shared/package.json ./shared/
-COPY services/webhook/package.json ./services/webhook/
+COPY shared/package*.json ./shared/
+COPY services/webhook/package*.json ./services/webhook/
 
 RUN npm ci --workspaces --include-workspace-root
 
