@@ -2,7 +2,8 @@
 
 const { config } = require('@nexuss/shared/config');
 
-const ALLOWED_ORIGINS = config.CORS_ORIGINS.split(',').map((s) => s.trim()).filter(Boolean);
+const corsOrigins = config.CORS_ORIGINS || '*';
+const ALLOWED_ORIGINS = corsOrigins.split(',').map((s) => s.trim()).filter(Boolean);
 const ALLOW_ANY = ALLOWED_ORIGINS.includes('*');
 
 // CORS middleware. Runs before auth so OPTIONS preflight requests succeed
