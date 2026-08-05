@@ -6,10 +6,10 @@ WORKDIR /app
 # Install system dependencies
 RUN apk add --no-cache python3 make g++ sqlite-dev
 
-# Copy package files
+# Copy package files + lock files
 COPY package*.json ./
-COPY shared/package.json ./shared/
-COPY services/api/package.json ./services/api/
+COPY shared/package*.json ./shared/
+COPY services/api/package*.json ./services/api/
 
 # Install dependencies
 RUN npm ci --workspaces --include-workspace-root
