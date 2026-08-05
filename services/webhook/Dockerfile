@@ -8,7 +8,7 @@ RUN apk add --no-cache python3 make g++
 # Build shared package first
 COPY shared/package*.json ./shared/
 WORKDIR /app/shared
-RUN npm ci && npm run build
+RUN npm install && npm run build
 
 # Install webhook dependencies
 WORKDIR /app
