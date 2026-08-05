@@ -1,6 +1,6 @@
 'use strict';
 
-const { config } = require('@nexuss/shared/config');
+const config = require('@nexuss/shared/config');
 const { log } = require('@nexuss/shared/utils');
 const { cleanup } = require('@nexuss/shared/persistence');
 

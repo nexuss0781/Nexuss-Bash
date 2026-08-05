@@ -1,7 +1,7 @@
 'use strict';
 
 const crypto = require('crypto');
-const { config } = require('@nexuss/shared/config');
+const config = require('@nexuss/shared/config');
 const { hashApiKey } = require('@nexuss/shared/utils');
 const { init, hydrate, flush, isReady, isEnabled, saveRun, saveJob, savePipeline, saveSession, saveEvent, savePackage, removePackage, pruneEvents, upsertUser, getUserByApiKeyHash, getUserByEmail, getUserById } = require('@nexuss/shared/persistence');
 

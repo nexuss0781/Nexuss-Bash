@@ -1,7 +1,7 @@
 'use strict';
 
 const { Queue, Worker } = require('bullmq');
-const { config } = require('@nexuss/shared/config');
+const config = require('@nexuss/shared/config');
 const { log } = require('@nexuss/shared/utils');
 const { generatePackageId } = require('@nexuss/shared/utils');
 const { install, getInstallStatus } = require('@nexuss/shared/persistence');

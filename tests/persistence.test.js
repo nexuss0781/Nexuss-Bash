@@ -14,14 +14,14 @@ process.env.PARADOX_PASSPHRASE = 'test-pass';
 process.env.PARADOX_OUTPUT_CAP_KB = '100';
 process.env.EXEC_TIMEOUT_SEC = '30';
 
-const config = require('../src/config');
-const persistence = require('../src/persistence');
-const jobExecutor = require('../src/core/jobExecutor');
-const pipelineExecutor = require('../src/core/pipelineExecutor');
-const sequentialExecutor = require('../src/core/sequentialExecutor');
-const sessionManager = require('../src/core/sessionManager');
-const eventBus = require('../src/core/eventBus');
-const packageManager = require('../src/core/packageManager');
+const config = require('@nexuss/shared/config');
+const persistence = require('@nexuss/shared/persistence');
+const jobExecutor = require('../services/api/src/core/jobExecutor');
+const pipelineExecutor = require('../services/api/src/core/pipelineExecutor');
+const sequentialExecutor = require('../services/api/src/core/sequentialExecutor');
+const sessionManager = require('../services/api/src/core/sessionManager');
+const eventBus = require('../services/api/src/core/eventBus');
+const packageManager = require('../services/api/src/core/packageManager');
 
 function waitFor(pred, timeoutMs = 15000, step = 100) {
   return new Promise((resolve) => {

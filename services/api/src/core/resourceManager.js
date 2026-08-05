@@ -2,7 +2,7 @@
 
 const fs = require('fs');
 const os = require('os');
-const { config } = require('@nexuss/shared/config');
+const config = require('@nexuss/shared/config');
 const { log } = require('@nexuss/shared/utils');
 
 let snapshot = {

@@ -7,7 +7,7 @@ const pty = require('node-pty');
 const { generateSessionId } = require('../utils/id');
 const { log, audit } = require('@nexuss/shared/utils');
 const { init, hydrate, flush, isReady, isEnabled, saveRun, saveJob, savePipeline, saveSession, saveEvent, savePackage, removePackage, pruneEvents, upsertUser, getUserByApiKeyHash, getUserByEmail, getUserById } = require('@nexuss/shared/persistence');
-const { config } = require('@nexuss/shared/config');
+const config = require('@nexuss/shared/config');
 
 const sessions = new Map();
 const IDLE_TIMEOUT_MS = config.IDLE_SESSION_TIMEOUT_MIN * 60 * 1000;

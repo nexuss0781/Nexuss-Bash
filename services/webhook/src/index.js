@@ -1,7 +1,7 @@
 'use strict';
 
 const express = require('express');
-const { config } = require('@nexuss/shared/config');
+const config = require('@nexuss/shared/config');
 const { log } = require('@nexuss/shared/utils');
 
 const app = express();
